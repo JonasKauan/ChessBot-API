@@ -5,6 +5,10 @@ import java.util.List;
 import com.github.bhlangonijr.chesslib.Board;
 import com.github.bhlangonijr.chesslib.move.Move;
 
+// TODO Implementar Killer MOoves
+// TODO Implementar Aspiration window
+// TODO Implementar Opening book
+
 public class Search {
     private final int INFINITY = 9999999;
     private final int lookupFailed = Integer.MIN_VALUE;

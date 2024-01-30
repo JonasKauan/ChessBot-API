@@ -14,8 +14,7 @@ public class Teste {
         // System.out.println(search.decide());
 
         Move move = search.getBoard().legalMoves().get(0);
-        System.out.println(move.getFrom().getFile().getNotation().);
-
+        System.out.println(move.getFrom().getFile().getNotation().toLowerCase());
         // System.out.println(search.calculateEndGameWeigth());
     }
 }

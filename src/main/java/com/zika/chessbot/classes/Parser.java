@@ -23,24 +23,25 @@ public class Parser {
     
             if(move.getTo().toString().equals("B1") || move.getTo().toString().equals("B8")) return "O-O-O";
         }
-
-        if(!piece.getSanSymbol().equals("")) san.append(piece.getSanSymbol());
-
+        
         boolean duplicatePiece = board.legalMoves()
                                     .stream()
+                                    .filter(m -> !m.toString().equals(move.toString()))
                                     .filter(m -> board.getPiece(m.getFrom()) == piece)
                                     .anyMatch(m -> m.getTo() == move.getTo());
+                                    
+        if(!piece.getSanSymbol().equals("")) san.append(piece.getSanSymbol());
 
-        if(duplicatePiece) san.append(move.getFrom().toString().toLowerCase());
-
+        if(duplicatePiece) san.append(move.getFrom().getFile().getNotation().toLowerCase());
+        
         if(capturedPiece.getPieceType() != null){
-            if(piece.getPieceType() == PieceType.PAWN){
+            if(piece.getPieceType() == PieceType.PAWN && !duplicatePiece){
                 san.append(move.getFrom().toString().toLowerCase());
             }
             san.append("x");
-        } 
-        String destination = move.getTo().toString();
-        san.append(destination.toLowerCase());
+        }
+        
+        san.append(move.getTo().toString().toLowerCase());
 
         board.doMove(move);
         if(board.isMated()) san.append("#");

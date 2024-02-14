@@ -1,11 +1,11 @@
-package com.zika.chessbot.classes;
+package com.zika.chessbot.bot;
 
 import java.util.List;
 
 import com.github.bhlangonijr.chesslib.Board;
 import com.github.bhlangonijr.chesslib.move.Move;
 
-// TODO Implementar Killer MOoves
+// TODO Implementar Killer Moves
 // TODO Implementar Aspiration window
 // TODO Implementar Opening book
 
@@ -15,7 +15,7 @@ public class Search {
     private final int maxNumberExtension = 16;
     private final int mateScore = Integer.MAX_VALUE;
     private final long timeToThink = 5000;
-    private final int valWindow = 50;
+    //private final int valWindow = 50;
     private long searchStartTime;
     private TranspositionTable tTable;
     private int finalDepth;

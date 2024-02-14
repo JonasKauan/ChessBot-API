@@ -1,7 +1,7 @@
 package com.zika.chessbot;
 
 import com.github.bhlangonijr.chesslib.move.Move;
-import com.zika.chessbot.classes.Search;
+import com.zika.chessbot.bot.Search;
 
 public class Teste {
     public static void main(String[] args) {

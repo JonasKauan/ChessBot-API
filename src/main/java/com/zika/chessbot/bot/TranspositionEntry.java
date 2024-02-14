@@ -1,4 +1,4 @@
-package com.zika.chessbot.classes;
+package com.zika.chessbot.bot;
 
 import com.github.bhlangonijr.chesslib.move.Move;
 

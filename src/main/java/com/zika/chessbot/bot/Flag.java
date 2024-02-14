@@ -1,4 +1,4 @@
-package com.zika.chessbot.classes;
+package com.zika.chessbot.bot;
 
 public enum Flag {
     UPPERBOUND,

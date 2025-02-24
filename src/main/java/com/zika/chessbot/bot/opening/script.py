@@ -4,7 +4,7 @@ import re
 
 def verificarString(movimento):
     regex = r'\d+\.'
-    return re.search(regex, movimento)
+    return re.bot(regex, movimento)
 
 def transformarMovimentos(movimentos):
     movesArray = movimentos.split();

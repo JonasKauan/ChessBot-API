@@ -18,7 +18,7 @@ public class ChessBotApplication {
 
 	@Bean
 	public CommandLineRunner mappingDemo(TipoPartidaRepository tipoPartidaRepository) {
-		boolean rodar = true;
+		boolean rodar = false;
 
 		return args -> {
 			if (rodar) {

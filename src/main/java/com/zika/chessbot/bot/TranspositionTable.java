@@ -7,9 +7,8 @@ import java.util.HashMap;
 import com.github.bhlangonijr.chesslib.Board;
 
 public class TranspositionTable {
-    private Map<Long, TranspositionEntry> map;
+    private final Map<Long, TranspositionEntry> map;
     private final long tableSize = 1024 * 1024 * 1024; 
-
 
     public TranspositionTable(){
         this.map = new HashMap<>();
@@ -43,9 +42,5 @@ public class TranspositionTable {
 
     public boolean hasEntry(long hashCode){
         return this.map.containsKey(hashCode);
-    }
-
-    public Map<Long, TranspositionEntry> getMap(){
-        return this.map;
     }
 }

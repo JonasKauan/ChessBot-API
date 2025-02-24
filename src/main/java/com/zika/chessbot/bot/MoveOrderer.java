@@ -10,10 +10,12 @@ import com.github.bhlangonijr.chesslib.Piece;
 import com.github.bhlangonijr.chesslib.PieceType;
 import com.github.bhlangonijr.chesslib.Rank;
 import com.github.bhlangonijr.chesslib.move.Move;
+import org.springframework.stereotype.Service;
 
+@Service
 public class MoveOrderer {
 
-    private static List<Move> orderMoveList(
+    private List<Move> orderMoveList(
         Board board,
         List<Move> unorderedMoves
     ){
@@ -45,10 +47,10 @@ public class MoveOrderer {
         }
 
 
-        return quickSort(moveStructs).stream().map(MoveStruct::getMove).toList();
+        return quickSort(moveStructs).stream().map(MoveStruct::move).toList();
     }
 
-    public static List<Move> getOrderedMoves(Board board, Move bestMove){        
+    public List<Move> getOrderedMoves(Board board, Move bestMove){
         List<Move> moves = new ArrayList<>();
         Predicate<Move> filter = move -> true;
 
@@ -67,18 +69,23 @@ public class MoveOrderer {
         return moves;
     }
 
-    public static List<Move> getCaptures(Board board, Move bestMove){
+    public List<Move> getCaptures(Board board, Move bestMove, boolean bestCaptures) {
+        if(!bestCaptures) {
+            return orderMoveList(board, filterCaptures(board));
+        }
+
+        // TODO Como eu faço para pegar as melhores capturas aqui?
         return orderMoveList(board, filterCaptures(board));
     }
 
-    private static List<Move> filterCaptures(Board board){
+    private List<Move> filterCaptures(Board board){
         return board.legalMoves()
             .stream()
             .filter(move -> board.getPiece(move.getTo()) != Piece.NONE)
             .toList();
     }
 
-    private static boolean isSquareAttacked(Move move, Board board){
+    private boolean isSquareAttacked(Move move, Board board){
         board.doMove(move);
 
         long attackCount = board.legalMoves()
@@ -92,7 +99,7 @@ public class MoveOrderer {
     }
 
 
-    private static List<MoveStruct> quickSort(List<MoveStruct> moves){
+    private List<MoveStruct> quickSort(List<MoveStruct> moves){
         if(moves.size() <= 1) return moves;
         
         MoveStruct pivot = moves.get(0);
@@ -111,22 +118,6 @@ public class MoveOrderer {
         return orderedList;
     }
     
-    static class MoveStruct{
-        Move move;
-        int score;
-
-        MoveStruct(Move move, int score){
-            this.move = move;
-            this.score = score;
-        }
-
-        Move getMove() {
-            return move;
-        }
-
-        public String toString(){
-            return String.format("Move {move: %s, score: %d}", this.move, this.score);
-        }
-    }
+    private record MoveStruct(Move move, int score){}
      
 }

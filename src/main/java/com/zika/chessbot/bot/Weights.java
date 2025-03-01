@@ -1,8 +1,12 @@
 package com.zika.chessbot.bot;
 
+import com.github.bhlangonijr.chesslib.Piece;
+import lombok.Getter;
+
+@Getter
 public enum Weights {
     
-    // Colocar o maiores pesos na penultima fileira ao inves de primeira?
+    // TODO: Colocar o maiores pesos na penultima fileira ao inves de primeira?
     WHITE_PAWN(
         100,
          new int[][]{
@@ -74,7 +78,7 @@ public enum Weights {
     ),
 
     WHITE_KING(
-        60000,
+        60_000,
         new int[][]{
             {17, 30, -3, -14, 6, -1, 40, 18},
             {-4, 3, -14, -50, -57, -18, 13, 4},
@@ -173,14 +177,15 @@ public enum Weights {
 
     // this.pieceWeights = { p: 100, n: 280, b:320, r: 479, q: 929, k: 60000};
     
-    private int pieceWeight;
-    private int[][] positionWeight;
+    private final int pieceWeight;
+    private final int[][] positionWeight;
 
     Weights(int weight, int[][] positionWeight){
         this.pieceWeight = weight;
         this.positionWeight = positionWeight;
     }
 
-    public int getWeight(){ return this.pieceWeight; }
-    public int[][] getPositionWeight() { return this.positionWeight; }
+    public static Weights getPieceWeights(Piece piece){
+        return Weights.valueOf(piece.toString());
+    }
 }

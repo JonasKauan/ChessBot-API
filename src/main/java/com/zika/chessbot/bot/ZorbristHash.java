@@ -4,7 +4,7 @@ import com.github.bhlangonijr.chesslib.Board;
 import com.github.bhlangonijr.chesslib.Piece;
 
 public class ZorbristHash {
-    private static long[][][] zTable = setZtable();
+    private final static long[][][] zTable = setZtable();
 
     public static long generateHash(Board board){
         Piece[][] boardMatrix = getBoardMatrix(board);
@@ -20,22 +20,21 @@ public class ZorbristHash {
         return hash;
     }
 
-
     private static int getPieceIndex(Piece piece){
         switch (piece) {
-            case WHITE_PAWN -> {return 0;}
-            case WHITE_KNIGHT -> {return 1;}
-            case WHITE_BISHOP -> {return 2;}
-            case WHITE_ROOK -> {return 3;}
-            case WHITE_QUEEN -> {return 4;}
-            case WHITE_KING -> {return 5;}
-            case BLACK_PAWN -> {return 6;}
-            case BLACK_KNIGHT -> {return 7;}
-            case BLACK_BISHOP -> {return 8;}
-            case BLACK_ROOK -> {return 9;}
-            case BLACK_QUEEN -> {return 10;}
-            case BLACK_KING -> {return 11;}
-            default -> {return -1;}
+            case WHITE_PAWN -> { return 0; }
+            case WHITE_KNIGHT -> { return 1; }
+            case WHITE_BISHOP -> { return 2; }
+            case WHITE_ROOK -> { return 3; }
+            case WHITE_QUEEN -> { return 4; }
+            case WHITE_KING -> { return 5; }
+            case BLACK_PAWN -> { return 6; }
+            case BLACK_KNIGHT -> { return 7; }
+            case BLACK_BISHOP -> { return 8; }
+            case BLACK_ROOK -> { return 9; }
+            case BLACK_QUEEN -> { return 10; }
+            case BLACK_KING -> { return 11; }
+            default -> { return -1; }
         }
     }
 

@@ -8,10 +8,12 @@ import com.github.bhlangonijr.chesslib.Board;
 
 public class TranspositionTable {
     private final Map<Long, TranspositionEntry> map;
-    private final long tableSize = 1024 * 1024 * 1024; 
+    private final long tableSize;
+    private static final int LOOKUP_FAILED = Integer.MIN_VALUE;
 
     public TranspositionTable(){
         this.map = new HashMap<>();
+        this.tableSize = 1024 * 1024 * 1024;
     }
 
     public double lookupEvaluation(Board board, int depth, double alpha, double beta){
@@ -27,7 +29,7 @@ public class TranspositionTable {
             }
         }
         
-        return Integer.MIN_VALUE;
+        return LOOKUP_FAILED;
     }
 
     public void setEntry(Board board, Flag flag, double score, int depth){

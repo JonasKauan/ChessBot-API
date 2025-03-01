@@ -14,20 +14,9 @@ public class TranspositionEntry {
     private double score;
     private int depth;
 
-    public TranspositionEntry(long key, Flag flag, double score, int depth){
+    public TranspositionEntry(long key, Flag flag, double score, int depth) {
         this.flag = flag;
         this.score = score;
         this.depth = depth;
-    }
-
-    @Override
-    public String toString() {
-        return "TranspositionEntry{" +
-                "key=" + key +
-                ", flag=" + flag +
-                ", move=" + move +
-                ", score=" + score +
-                ", depth=" + depth +
-                '}';
     }
 }

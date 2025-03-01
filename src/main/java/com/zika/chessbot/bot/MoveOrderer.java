@@ -5,52 +5,42 @@ import java.util.List;
 import java.util.function.Predicate;
 
 import com.github.bhlangonijr.chesslib.Board;
-import com.github.bhlangonijr.chesslib.Side;
 import com.github.bhlangonijr.chesslib.Piece;
-import com.github.bhlangonijr.chesslib.PieceType;
-import com.github.bhlangonijr.chesslib.Rank;
 import com.github.bhlangonijr.chesslib.move.Move;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 @Service
+@RequiredArgsConstructor
 public class MoveOrderer {
+    private final BoardEvaluator boardEvaluator;
 
     private List<Move> orderMoveList(
         Board board,
-        List<Move> unorderedMoves
+        List<Move> unorderedMoves,
+        KillerMoves killerMoves,
+        Integer depth
     ){
-        List<MoveStruct> moveStructs = new ArrayList<>();
-        Side attacker = board.getSideToMove() == Side.WHITE ? Side.BLACK : Side.WHITE;
+        List<ScoredMove> scoredMoves = new ArrayList<>();
 
         for(Move move : unorderedMoves){
-            int score = 0;
-            Piece movingPiece = board.getPiece(move.getFrom());
-            Piece capturedPiece = board.getPiece(move.getTo());
-            Weights movingPieceWeigth = Weights.valueOf(board.getSideToMove()+"_"+movingPiece.getPieceType().toString());
-
-            if(capturedPiece.getPieceType() != null){
-                Weights capturedPieceWeights = Weights.valueOf(attacker+"_"+capturedPiece.getPieceType().toString());
-                score += 10 * (capturedPieceWeights.getWeight() - movingPieceWeigth.getWeight());
+            if(BoardUtils.captureMove(move, board)) {
+                scoredMoves.add(new ScoredMove(move, boardEvaluator.MVV_LVA(move, board)));
+                continue;
             }
 
-            if(
-                movingPiece.getPieceType() == PieceType.PAWN &&
-                (move.getTo().getRank() == Rank.RANK_1 ||
-                 move.getTo().getRank() == Rank.RANK_8)
-            ){
-                score += Weights.WHITE_QUEEN.getWeight();
+            if(killerMoves != null && killerMoves.isKillerMove(move, depth)) {
+                scoredMoves.add(new ScoredMove(move, 10000));
+                continue;
             }
 
-            if(isSquareAttacked(move, board)) score -= movingPieceWeigth.getWeight();
-
-            moveStructs.add(new MoveStruct(move, score));
+            scoredMoves.add(new ScoredMove(move, boardEvaluator.evaluateQuietMove(move, board)));
         }
 
-
-        return quickSort(moveStructs).stream().map(MoveStruct::move).toList();
+        return quickSort(scoredMoves).stream().map(ScoredMove::move).toList();
     }
 
-    public List<Move> getOrderedMoves(Board board, Move bestMove){
+    public List<Move> getOrderedMoves(Board board, Move bestMove, KillerMoves killerMoves, Integer depth) {
         List<Move> moves = new ArrayList<>();
         Predicate<Move> filter = move -> true;
 
@@ -60,7 +50,7 @@ public class MoveOrderer {
         }
 
         moves.addAll(
-            orderMoveList(board, board.legalMoves())
+            orderMoveList(board, board.legalMoves(), killerMoves, depth)
                 .stream()
                 .filter(filter)
                 .toList()
@@ -71,11 +61,11 @@ public class MoveOrderer {
 
     public List<Move> getCaptures(Board board, Move bestMove, boolean bestCaptures) {
         if(!bestCaptures) {
-            return orderMoveList(board, filterCaptures(board));
+            return orderMoveList(board, filterCaptures(board), null, null);
         }
 
         // TODO Como eu faço para pegar as melhores capturas aqui?
-        return orderMoveList(board, filterCaptures(board));
+        return orderMoveList(board, filterCaptures(board), null, null);
     }
 
     private List<Move> filterCaptures(Board board){
@@ -99,25 +89,24 @@ public class MoveOrderer {
     }
 
 
-    private List<MoveStruct> quickSort(List<MoveStruct> moves){
+    private List<ScoredMove> quickSort(List<ScoredMove> moves){
         if(moves.size() <= 1) return moves;
         
-        MoveStruct pivot = moves.get(0);
-        List<MoveStruct> rigthList = new ArrayList<>();
-        List<MoveStruct> leftList = new ArrayList<>();
+        ScoredMove pivot = moves.get(0);
+        List<ScoredMove> rigthList = new ArrayList<>();
+        List<ScoredMove> leftList = new ArrayList<>();
 
         for(int i = 1; i < moves.size(); i++){
             if(moves.get(i).score > pivot.score) rigthList.add(moves.get(i));
             else leftList.add(moves.get(i));
         }
         
-        List<MoveStruct> orderedList = new ArrayList<>(quickSort(rigthList));
+        List<ScoredMove> orderedList = new ArrayList<>(quickSort(rigthList));
         orderedList.add(pivot);
         orderedList.addAll(quickSort(leftList));
 
         return orderedList;
     }
     
-    private record MoveStruct(Move move, int score){}
-     
+    private record ScoredMove(Move move, int score) {}
 }

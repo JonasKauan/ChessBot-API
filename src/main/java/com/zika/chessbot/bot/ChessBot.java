@@ -5,12 +5,14 @@ import java.util.List;
 import com.github.bhlangonijr.chesslib.Board;
 import com.github.bhlangonijr.chesslib.move.Move;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 // TODO Implementar Killer Moves
 // TODO Implementar Aspiration window
 // TODO Implementar Opening book
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class ChessBot {
@@ -21,7 +23,7 @@ public class ChessBot {
     private static final int LOOKUP_FAILED = Integer.MIN_VALUE;
     private static final int MAX_NUMBER_EXTENSION = 16;
     private static final int MATE_SCORE = Integer.MAX_VALUE;
-    private static final long TIME_TO_THINK = 5 * 1000;
+    private static final long TIME_TO_THINK = 100;
 
     public String decide(String fenStr) {
         Board board = new Board();
@@ -31,19 +33,26 @@ public class ChessBot {
 
         double alpha = -INFINITY;
         double beta = INFINITY;
-        long searchStartTime = System.currentTimeMillis();
 
         Move bestMove = null;
 
-        for(int depth = 1; depth <= Integer.MAX_VALUE; depth++) {
+        long searchStartTime = System.currentTimeMillis();
+        for(int depth = 1; true; depth++) {
+            KillerMoves killerMoves = new KillerMoves();
             double bestScore = -INFINITY;
 
-            for(Move move : moveOrderer.getOrderedMoves(board, bestMove)){
+            for(Move move : moveOrderer.getOrderedMoves(board, bestMove, killerMoves, null)) {
                 board.doMove(move);
-                double score = -negamax(depth - 1, alpha, beta, 0, MATE_SCORE, board, tTable, searchStartTime);
+                double score = -negamax(depth - 1, alpha, beta, 0, MATE_SCORE, board, tTable, searchStartTime, killerMoves);
                 board.undoMove();
 
-                if(score == INFINITY) {
+                if (score == MATE_SCORE || score == -MATE_SCORE) {
+                    return sanParser.parseToSan(board, move);
+                }
+
+                if(score == -INFINITY) {
+                    log.info("Busca terminada após profundidade de {}", depth);
+                    log.info("Melhor movimento encontrado {}", bestMove);
                     return sanParser.parseToSan(board, bestMove);
                 }
 
@@ -53,8 +62,6 @@ public class ChessBot {
                 }
             }
         }
-
-        return sanParser.parseToSan(board, bestMove);
     }
 
     public double negamax(
@@ -65,10 +72,11 @@ public class ChessBot {
             int mate,
             Board board,
             TranspositionTable tTable,
-            long searchStartTime
+            long searchStartTime,
+            KillerMoves killerMoves
     ) {
         if(maxSearchTimeExceeded(searchStartTime)) {
-            return -INFINITY;
+            return INFINITY;
         }
 
         if(depth == 0) {
@@ -81,7 +89,7 @@ public class ChessBot {
             return transpositionLookup;
         }
 
-        List<Move> moves = moveOrderer.getOrderedMoves(board, null);
+        List<Move> moves = moveOrderer.getOrderedMoves(board, null, killerMoves, depth);
 
         if(moves.isEmpty()){
             if(board.isKingAttacked()) {
@@ -100,24 +108,25 @@ public class ChessBot {
             double score;
 
             if(pvNode) {
-                score = -negamax(depth - 1 + extension, -alpha - 1, -alpha, totalExtensions + extension, mate - 1, board, tTable, searchStartTime);
-                if(score > alpha && score < beta) score = -negamax(depth - 1 + extension, -beta, -alpha, totalExtensions + extension, mate - 1, board, tTable, searchStartTime);
+                score = -negamax(depth - 1 + extension, -alpha - 1, -alpha, totalExtensions + extension, mate - 1, board, tTable, searchStartTime, killerMoves);
+                if(score > alpha && score < beta) score = -negamax(depth - 1 + extension, -beta, -alpha, totalExtensions + extension, mate - 1, board, tTable, searchStartTime, killerMoves);
             } else {
-                score = -negamax(depth - 1 + extension, -beta, -alpha, totalExtensions + extension, mate - 1, board, tTable, searchStartTime);
+                score = -negamax(depth - 1 + extension, -beta, -alpha, totalExtensions + extension, mate - 1, board, tTable, searchStartTime, killerMoves);
             }
             
             board.undoMove();
 
-            if(score == INFINITY) {
+            if(maxSearchTimeExceeded(searchStartTime)) {
                 return INFINITY;
             }
 
             if(score >= beta) {
                 tTable.setEntry(board, Flag.LOWERBOUND, beta, depth);
+                killerMoves.storeKillerMove(move, depth, board);
                 return beta;
             }
 
-            if(score > alpha){
+            if(score > alpha) {
                 flag = Flag.EXACT;
                 alpha = score;
                 pvNode = true;

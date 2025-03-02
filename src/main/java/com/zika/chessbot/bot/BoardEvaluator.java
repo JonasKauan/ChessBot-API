@@ -2,12 +2,17 @@ package com.zika.chessbot.bot;
 
 import com.github.bhlangonijr.chesslib.*;
 import com.github.bhlangonijr.chesslib.move.Move;
+import com.zika.chessbot.bot.utils.BishopUtils;
+import com.zika.chessbot.bot.utils.KingUtils;
+import com.zika.chessbot.bot.utils.RookUtils;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 @Service
+@RequiredArgsConstructor
 public class BoardEvaluator {
 
-    int[][] CENTER_BONUS = {
+    private final static int[][] CENTER_BONUS = {
             {3, 4, 4, 5, 5, 4, 4, 3},
             {4, 6, 6, 8, 8, 6, 6, 4},
             {4, 6, 7, 10, 10, 7, 6, 4},
@@ -18,19 +23,54 @@ public class BoardEvaluator {
             {3, 4, 4, 5, 5, 4, 4, 3}
     };
 
+    private final static int[][] KING_CENTER_BONUS = {
+            {0, 0, 0, 0, 0, 0, 0, 0},
+            {0, 5, 10, 15, 15, 10, 5, 0},
+            {0, 10, 20, 30, 30, 20, 10, 0},
+            {0, 15, 30, 50, 50, 30, 15, 0},
+            {0, 15, 30, 50, 50, 30, 15, 0},
+            {0, 10, 20, 30, 30, 20, 10, 0},
+            {0, 5, 10, 15, 15, 10, 5, 0},
+            {0, 0, 0, 0, 0, 0, 0, 0}
+    };
+
+    private final BishopUtils bishopUtils;
+    private final RookUtils rookUtils;
+    private final KingUtils kingUtils;
 
     public int evaluate(Board board) {
         int evaluation = calculateScore(board, Side.WHITE) - calculateScore(board, Side.BLACK);
         return evaluation * (board.getSideToMove() == Side.WHITE ? 1 : -1);
     }
 
-    public double calculateContemptFactor(Board board){
+    public int calculateContemptFactor(Board board){
         double contempt = -.5;
         int evaluation = evaluate(board);
-        return contempt * calculateEndGameWeigth(board) * (evaluation > 0 ? 1 : -1);
+        return (int) (contempt * calculateEndGameWeigth(board) * (evaluation > 0 ? 1 : -1));
     }
 
-    public double calculateEndGameWeigth(Board board){
+    private int calculateScore(Board board, Side side) {
+        int score = 0;
+        Square[] squares = Square.values();
+
+        for(Square square : squares) {
+            Piece piece = board.getPiece(square);
+
+            if(piece == Piece.NONE || piece.getPieceSide() != side) {
+                continue;
+            }
+
+            Weights pieceWeights = Weights.valueOf(piece.toString());
+
+            score += pieceWeights.getPieceWeight();
+            score += pieceWeights.getPositionWeight()[square.getRank().ordinal()][square.getFile().ordinal()];
+            score += evaluateStrategicPosition(square, board);
+        }
+
+        return score;
+    }
+
+    public double calculateEndGameWeigth(Board board) {
         long bitBoard = board.getBitboard();
         int numberPieces = 0;
 
@@ -43,39 +83,18 @@ public class BoardEvaluator {
         return numberPieces / 32.;
     }
 
-    private int calculateScore(Board board, Side side) {
-        PieceType[] pieces = PieceType.values();
-        
-        int score = 0;
-        for(PieceType type : pieces){
-            if(type == PieceType.NONE) continue;    
-            score += quantifyPieces(board, type, side);
+    public int evaluateCapture(Move move, Board board) {
+        int score = MVV_LVA(move, board);
+
+        if(BoardUtils.isSquareAttacked(move, board)) {
+            score -= Weights.valueOf(board.getPiece(move.getFrom()).toString()).getPieceWeight();
         }
 
-        return score;
-    }
-
-    private int quantifyPieces(Board board, PieceType type, Side side) {
-        long pieceBitBoard = board.getBitboard(Piece.valueOf(side.toString()+"_"+type.toString())) & board.getBitboard();
-
-        int piecesCount = 0;
-        Weights w = Weights.valueOf(side.toString()+"_"+type.toString());
-
-        for(int i = 0; i < 8; i++){
-            for(int j = 0; j < 8; j++){
-                long bit = 1L << (i * 8 + j);
-                if((pieceBitBoard & bit) == 0) continue;
-                piecesCount += w.getPieceWeight() + w.getPositionWeight()[i][j];
-            }
-        }
-
-        return piecesCount;
+        return score + evaluateMobility(move, board) + evaluateStrategicPosition(move, board);
     }
 
     public int evaluateQuietMove(Move move, Board board) {
         Piece piece = board.getPiece(move.getFrom());
-        PieceType movedPieceType = piece.getPieceType();
-
         int[][] movedPiecePositionWeights = Weights.valueOf(piece.toString()).getPositionWeight();
 
         Square from = move.getFrom();
@@ -84,15 +103,61 @@ public class BoardEvaluator {
         int pstEvaluation = movedPiecePositionWeights[to.getRank().ordinal()][to.getFile().ordinal()]
                 - movedPiecePositionWeights[from.getRank().ordinal()][from.getFile().ordinal()];
 
-        int mobilityEval = evaluateMobility(move, board);
-        int centerControl = evaluateCenterControl(from, to);
-
-        return pstEvaluation + mobilityEval + centerControl;
+        return pstEvaluation + evaluateMobility(move, board) + evaluateStrategicPosition(move, board);
     }
 
-    private int evaluateCenterControl(Square from, Square to) {
+    private int evaluateStrategicPosition(Move move, Board board) {
+        return switch(board.getPiece(move.getFrom()).getPieceType()) {
+            case BISHOP -> evaluateDiagonalControl(move, board) + evaluateBlockPenalty(move.getTo(), board);
+            case ROOK -> evaluateFileControl(move.getTo(), board);
+            case QUEEN -> evaluateDiagonalControl(move, board) + evaluateFileControl(move.getTo(), board);
+            case KING -> evaluateKingSafety(move.getTo(), board);
+            default -> evaluateCenterControl(move.getTo(), move.getFrom());
+        };
+    }
+
+    private int evaluateStrategicPosition(Square square, Board board) {
+        return switch(board.getPiece(square).getPieceType()) {
+            case BISHOP -> evaluateDiagonalControl(square, board) + evaluateBlockPenalty(square, board);
+            case ROOK -> evaluateFileControl(square, board);
+            case QUEEN -> evaluateDiagonalControl(square, board) + evaluateFileControl(square, board);
+            case KING -> evaluateKingSafety(square, board);
+            default -> evaluateCenterControl(square);
+        };
+    }
+
+    private int evaluateKingSafety(Square square, Board board) {
+        if(BoardUtils.isEndGame(board)) {
+            return KING_CENTER_BONUS[square.getRank().ordinal()][square.getFile().ordinal()];
+        }
+
+        return kingUtils.countAttackersNearKingZone(square, board) * -20;
+    }
+
+    private int evaluateFileControl(Square square, Board board) {
+        return (int) (rookUtils.getFileOpenness(square, board) * 30);
+    }
+
+    private int evaluateBlockPenalty(Square square, Board board) {
+        return -bishopUtils.countBlockedDiagonals(board, square) * 10;
+    }
+
+    private int evaluateDiagonalControl(Move move, Board board) {
+        return bishopUtils.countDiagonalMoves(board, move.getTo())
+                - bishopUtils.countDiagonalMoves(board, move.getFrom());
+    }
+
+    private int evaluateDiagonalControl(Square square, Board board) {
+        return bishopUtils.countDiagonalMoves(board, square);
+    }
+
+    private int evaluateCenterControl(Square to, Square from) {
         return CENTER_BONUS[to.getRank().ordinal()][to.getFile().ordinal()]
                 - CENTER_BONUS[from.getRank().ordinal()][from.getFile().ordinal()];
+    }
+
+    private int evaluateCenterControl(Square square) {
+        return CENTER_BONUS[square.getRank().ordinal()][square.getFile().ordinal()];
     }
 
     private int evaluateMobility(Move move, Board board) {
@@ -116,7 +181,7 @@ public class BoardEvaluator {
         return mobilityAfter - mobilityBefore;
     }
 
-    public int MVV_LVA(Move move, Board board) {
+    private int MVV_LVA(Move move, Board board) {
         Weights capturedPieceWeight = Weights.valueOf(board.getPiece(move.getTo()).toString());
         Weights capturerPieceWeight = Weights.valueOf(board.getPiece(move.getFrom()).toString());
 

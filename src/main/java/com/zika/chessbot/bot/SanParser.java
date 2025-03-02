@@ -12,6 +12,7 @@ import org.springframework.stereotype.Service;
 public class SanParser {
     public String parseToSan(Board board, Move move){
         if(move == null) return "null";
+
         StringBuilder san = new StringBuilder();
         Piece piece = board.getPiece(move.getFrom());
         Piece capturedPiece = board.getPiece(move.getTo());
@@ -19,10 +20,10 @@ public class SanParser {
         if( piece.getSanSymbol().equals("K") &&
             (board.getCastleRight(Side.BLACK) != CastleRight.NONE ||
             board.getCastleRight(Side.WHITE) != CastleRight.NONE)
-        ){
+        ) {
             if(move.getTo().toString().equals("G1") || move.getTo().toString().equals("G8")) return "O-O";
     
-            if(move.getTo().toString().equals("B1") || move.getTo().toString().equals("B8")) return "O-O-O";
+            if(move.getTo().toString().equals("C1") || move.getTo().toString().equals("C8")) return "O-O-O";
         }
         
         boolean duplicatePiece = board.legalMoves()

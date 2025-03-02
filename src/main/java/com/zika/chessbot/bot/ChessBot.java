@@ -31,8 +31,8 @@ public class ChessBot {
 
         TranspositionTable tTable = new TranspositionTable();
 
-        double alpha = -INFINITY;
-        double beta = INFINITY;
+        int alpha = -INFINITY;
+        int beta = INFINITY;
 
         Move bestMove = null;
 
@@ -64,10 +64,10 @@ public class ChessBot {
         }
     }
 
-    public double negamax(
+    public int negamax(
             int depth,
-            double alpha,
-            double beta,
+            int alpha,
+            int beta,
             int totalExtensions,
             int mate,
             Board board,
@@ -83,7 +83,7 @@ public class ChessBot {
             return quiescenceSearch(alpha, beta, board);
         }
 
-        double transpositionLookup = tTable.lookupEvaluation(board, depth, alpha, beta);
+        int transpositionLookup = tTable.lookupEvaluation(board, depth, alpha, beta);
 
         if(transpositionLookup != LOOKUP_FAILED) {
             return transpositionLookup;
@@ -105,7 +105,7 @@ public class ChessBot {
         for(Move move : moves) {
             board.doMove(move);
             int extension = calculateSearchExtension(move, totalExtensions, board);
-            double score;
+            int score;
 
             if(pvNode) {
                 score = -negamax(depth - 1 + extension, -alpha - 1, -alpha, totalExtensions + extension, mate - 1, board, tTable, searchStartTime, killerMoves);
@@ -151,8 +151,9 @@ public class ChessBot {
         return extension;
     }
 
-    private double quiescenceSearch(double alpha, double beta, Board board) {
+    private int quiescenceSearch(int alpha, int beta, Board board) {
         int standPat = boardEvaluator.evaluate(board);
+
         if(standPat >= beta) {
             return beta;
         }
@@ -161,7 +162,7 @@ public class ChessBot {
 
         for(Move capture : moveOrderer.getCaptures(board, null, true)) {
             board.doMove(capture);
-            double score = -quiescenceSearch(-beta, -alpha, board);
+            int score = -quiescenceSearch(-beta, -alpha, board);
             board.undoMove();
 
             double delta = score - standPat;

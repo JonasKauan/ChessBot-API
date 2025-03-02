@@ -184,8 +184,4 @@ public enum Weights {
         this.pieceWeight = weight;
         this.positionWeight = positionWeight;
     }
-
-    public static Weights getPieceWeights(Piece piece){
-        return Weights.valueOf(piece.toString());
-    }
 }

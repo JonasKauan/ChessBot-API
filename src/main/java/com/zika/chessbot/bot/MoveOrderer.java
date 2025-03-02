@@ -25,7 +25,7 @@ public class MoveOrderer {
 
         for(Move move : unorderedMoves){
             if(BoardUtils.captureMove(move, board)) {
-                scoredMoves.add(new ScoredMove(move, boardEvaluator.MVV_LVA(move, board)));
+                scoredMoves.add(new ScoredMove(move, boardEvaluator.evaluateCapture(move, board)));
                 continue;
             }
 
@@ -74,20 +74,6 @@ public class MoveOrderer {
             .filter(move -> board.getPiece(move.getTo()) != Piece.NONE)
             .toList();
     }
-
-    private boolean isSquareAttacked(Move move, Board board){
-        board.doMove(move);
-
-        long attackCount = board.legalMoves()
-            .stream()
-            .filter(m -> m.getTo() == move.getTo())
-            .count();
-
-        board.undoMove();
-        
-        return attackCount > 0;
-    }
-
 
     private List<ScoredMove> quickSort(List<ScoredMove> moves){
         if(moves.size() <= 1) return moves;

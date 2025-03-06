@@ -25,14 +25,14 @@ public class SanParser {
     
             if(move.getTo().toString().equals("C1") || move.getTo().toString().equals("C8")) return "O-O-O";
         }
-        
-        boolean duplicatePiece = board.legalMoves()
-                                    .stream()
-                                    .filter(m -> !m.toString().equals(move.toString()))
-                                    .filter(m -> board.getPiece(m.getFrom()) == piece)
-                                    .anyMatch(m -> m.getTo() == move.getTo());
                                     
         if(!piece.getSanSymbol().isEmpty()) san.append(piece.getSanSymbol());
+
+        boolean duplicatePiece = board.legalMoves()
+                .stream()
+                .filter(m -> m.getFrom() != move.getFrom())
+                .filter(m -> board.getPiece(m.getFrom()) == piece)
+                .anyMatch(m -> m.getTo() == move.getTo());
 
         if(duplicatePiece) san.append(move.getFrom().getFile().getNotation().toLowerCase());
         
@@ -44,6 +44,10 @@ public class SanParser {
         }
         
         san.append(move.getTo().toString().toLowerCase());
+
+        if(move.getPromotion() != Piece.NONE) {
+            san.append(move.getPromotion().getSanSymbol().toUpperCase());
+        }
 
         board.doMove(move);
         if(board.isMated()) san.append("#");

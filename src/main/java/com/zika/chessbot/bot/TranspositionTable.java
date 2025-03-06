@@ -16,9 +16,7 @@ public class TranspositionTable {
         this.tableSize = 1024 * 1024 * 1024;
     }
 
-    public int lookupEvaluation(Board board, int depth, int alpha, int beta){
-        long hashKey = ZorbristHash.generateHash(board);
- 
+    public int lookupEvaluation(Board board, int depth, int alpha, int beta, long hashKey){
         TranspositionEntry entry = this.getEntry(hashKey % this.tableSize);
         
         if(this.hasEntry(hashKey % this.tableSize) && entry.getKey() == hashKey){
@@ -32,8 +30,7 @@ public class TranspositionTable {
         return LOOKUP_FAILED;
     }
 
-    public void setEntry(Board board, Flag flag, int score, int depth){
-        long hashKey = ZorbristHash.generateHash(board);
+    public void setEntry(Board board, Flag flag, int score, int depth, long hashKey){
         TranspositionEntry entry = new TranspositionEntry(hashKey, flag, score, depth);
         this.map.put(hashKey % this.tableSize, entry);
     }

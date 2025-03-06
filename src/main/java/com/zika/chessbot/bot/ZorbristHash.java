@@ -1,71 +1,113 @@
 package com.zika.chessbot.bot;
 
-import com.github.bhlangonijr.chesslib.Board;
-import com.github.bhlangonijr.chesslib.Piece;
+import com.github.bhlangonijr.chesslib.*;
+import com.zika.chessbot.bot.utils.ZobristUtils;
+import org.springframework.stereotype.Service;
 
+
+@Service
 public class ZorbristHash {
-    private final static long[][][] zTable = setZtable();
-
-    public static long generateHash(Board board){
-        Piece[][] boardMatrix = getBoardMatrix(board);
+    public long generateHash(Board board) {
         long hash = 0;
-        
-        for(int i = 0; i < boardMatrix.length; i++){
-            for(int j = 0; j < boardMatrix[i].length; j++){
-                if(boardMatrix[i][j] == null) continue;
-                hash ^= zTable[i][j][getPieceIndex(boardMatrix[i][j])];
+
+        for(Square square : Square.values()) {
+            Piece piece = board.getPiece(square);
+
+            if(piece == Piece.NONE) {
+                continue;
             }
+
+            int fileIndex = square.getFile().ordinal();
+            int rankIndex = square.getRank().ordinal();
+
+            hash ^= ZobristUtils.zobristTable[64 * pieceIndex(piece) + 8 * rankIndex + fileIndex];
+        }
+
+        int[] castleIndex = castlingRightsIndex(board);
+
+        if(castleIndex != null) {
+            for(int index : castleIndex) {
+                hash ^= ZobristUtils.zobristTable[768 + index];
+            }
+        }
+
+        Square enPassantSquare = board.getEnPassant();
+
+        if(enPassantSquare != Square.NONE && isEnPassantValid(board, enPassantSquare)) {
+            hash ^= ZobristUtils.zobristTable[772 + enPassantSquare.getFile().ordinal()];
+        }
+
+        if(board.getSideToMove() == Side.WHITE) {
+            hash ^= ZobristUtils.zobristTable[780];
         }
 
         return hash;
     }
 
-    private static int getPieceIndex(Piece piece){
-        switch (piece) {
-            case WHITE_PAWN -> { return 0; }
-            case WHITE_KNIGHT -> { return 1; }
-            case WHITE_BISHOP -> { return 2; }
-            case WHITE_ROOK -> { return 3; }
-            case WHITE_QUEEN -> { return 4; }
-            case WHITE_KING -> { return 5; }
-            case BLACK_PAWN -> { return 6; }
-            case BLACK_KNIGHT -> { return 7; }
-            case BLACK_BISHOP -> { return 8; }
-            case BLACK_ROOK -> { return 9; }
-            case BLACK_QUEEN -> { return 10; }
-            case BLACK_KING -> { return 11; }
-            default -> { return -1; }
+    private int[] castlingRightsIndex(Board board) {
+        CastleRight whiteCastleRight = board.getCastleRight(Side.WHITE);
+        CastleRight blackCastleRight = board.getCastleRight(Side.BLACK);
+
+        if(
+            whiteCastleRight == CastleRight.NONE
+            && blackCastleRight == CastleRight.NONE
+        ) {
+            return null;
         }
+
+        int[] castleIndexesWhite = switch(whiteCastleRight) {
+            case KING_SIDE -> new int[] { 0 };
+            case QUEEN_SIDE, KING_AND_QUEEN_SIDE -> new int[] { 0, 1 };
+            default -> new int[]{};
+        };
+
+        int[] castleIndexesBlack = switch(blackCastleRight) {
+            case KING_SIDE -> new int[] { 2 };
+            case QUEEN_SIDE, KING_AND_QUEEN_SIDE -> new int[] { 2, 3 };
+            default -> new int[]{};
+        };
+
+        int[] castleIndexes = new int[castleIndexesWhite.length + castleIndexesBlack.length];
+
+        System.arraycopy(castleIndexesWhite, 0, castleIndexes, 0, castleIndexesWhite.length);
+        System.arraycopy(castleIndexesBlack, 0, castleIndexes, castleIndexesWhite.length, castleIndexesBlack.length);
+
+        return castleIndexes;
     }
 
-    private static Piece[][] getBoardMatrix(Board board){
-        Piece[][] boardMatrix = new Piece[8][8];
-        Piece[] pieces = Piece.values();
-        for(Piece piece : pieces){
-            if(piece == Piece.NONE) continue;
-            long pieceBitBoard = board.getBitboard(piece) & board.getBitboard();
-            for(int i = 0; i < 8; i++){
-                for(int j = 0; j < 8; j++){
-                    long bit = 1L << (i * 8 + j);
-                    if((pieceBitBoard & bit) == 0) continue;
-                    boardMatrix[i][j] = piece;
-                }
-            }
+    private boolean isEnPassantValid(Board board, Square enPassantSquare) {
+        Square[] squares = Square.values();
+
+        Square enPassantIColumn = squares[enPassantSquare.ordinal() + 1];
+        Square enPassantJColumn = squares[enPassantSquare.ordinal() - 1];
+
+        if(enPassantIColumn.getRank() != enPassantSquare.getRank()) {
+            return board.getPiece(enPassantJColumn).getPieceType() == PieceType.PAWN;
         }
 
-        return boardMatrix;
+        if(enPassantJColumn.getRank() != enPassantSquare.getRank()) {
+            return board.getPiece(enPassantIColumn).getPieceType() == PieceType.PAWN;
+        }
+
+        return board.getPiece(enPassantJColumn).getPieceType() == PieceType.PAWN
+                || board.getPiece(enPassantIColumn).getPieceType() == PieceType.PAWN;
     }
 
-    private static long[][][] setZtable(){
-        long[][][] table = new long[8][8][12];
-        for(int i = 0; i < 8; i++){
-            for(int j = 0; j < 8; j++){
-                for(int k = 0; k < 12; k++){
-                    table[i][j][k] = (long)(Math.floor(Math.random() * Math.pow(2, 64)));
-                }
-            }
-        }
-
-        return table;
+    private int pieceIndex(Piece piece){
+        return switch(piece) {
+            case BLACK_PAWN -> 0;
+            case WHITE_PAWN -> 1;
+            case BLACK_KNIGHT -> 2;
+            case WHITE_KNIGHT -> 3;
+            case BLACK_BISHOP -> 4;
+            case WHITE_BISHOP -> 5;
+            case BLACK_ROOK -> 6;
+            case WHITE_ROOK -> 7;
+            case BLACK_QUEEN -> 8;
+            case WHITE_QUEEN -> 9;
+            case BLACK_KING -> 10;
+            case WHITE_KING -> 11;
+            default -> -1;
+        };
     }
 }

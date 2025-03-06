@@ -83,7 +83,7 @@ public class MoveOrderer {
         List<ScoredMove> leftList = new ArrayList<>();
 
         for(int i = 1; i < moves.size(); i++){
-            if(moves.get(i).score > pivot.score) rigthList.add(moves.get(i));
+            if(moves.get(i).score() > pivot.score()) rigthList.add(moves.get(i));
             else leftList.add(moves.get(i));
         }
         
@@ -93,6 +93,4 @@ public class MoveOrderer {
 
         return orderedList;
     }
-    
-    private record ScoredMove(Move move, int score) {}
 }

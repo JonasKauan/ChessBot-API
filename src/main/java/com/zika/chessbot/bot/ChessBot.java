@@ -8,9 +8,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
-// TODO Implementar Killer Moves
 // TODO Implementar Aspiration window
-// TODO Implementar Opening book
 
 @Slf4j
 @Service
@@ -19,16 +17,24 @@ public class ChessBot {
     private final BoardEvaluator boardEvaluator;
     private final SanParser sanParser;
     private final MoveOrderer moveOrderer;
+    private final OpeningBook openingBook;
+    private final ZorbristHash zorbrist;
     private static final int INFINITY = 9999999;
     private static final int LOOKUP_FAILED = Integer.MIN_VALUE;
     private static final int MAX_NUMBER_EXTENSION = 16;
     private static final int MATE_SCORE = Integer.MAX_VALUE;
     private static final long TIME_TO_THINK = 100;
 
-    public String decide(String fenStr) {
+    public String decideMove(String fenString) {
         Board board = new Board();
-        board.loadFromFen(fenStr);
+        board.loadFromFen(fenString);
 
+        Move openingMove = openingBook.getOpeningMove(board);
+
+        return openingMove == null ? search(board) : sanParser.parseToSan(board, openingMove);
+    }
+
+    private String search(Board board) {
         TranspositionTable tTable = new TranspositionTable();
 
         int alpha = -INFINITY;
@@ -83,7 +89,8 @@ public class ChessBot {
             return quiescenceSearch(alpha, beta, board);
         }
 
-        int transpositionLookup = tTable.lookupEvaluation(board, depth, alpha, beta);
+        long hashKey = zorbrist.generateHash(board);
+        int transpositionLookup = tTable.lookupEvaluation(board, depth, alpha, beta, hashKey);
 
         if(transpositionLookup != LOOKUP_FAILED) {
             return transpositionLookup;
@@ -121,7 +128,7 @@ public class ChessBot {
             }
 
             if(score >= beta) {
-                tTable.setEntry(board, Flag.LOWERBOUND, beta, depth);
+                tTable.setEntry(board, Flag.LOWERBOUND, beta, depth, hashKey);
                 killerMoves.storeKillerMove(move, depth, board);
                 return beta;
             }
@@ -133,7 +140,7 @@ public class ChessBot {
             }
         }
 
-        tTable.setEntry(board, flag, alpha, depth);
+        tTable.setEntry(board, flag, alpha, depth, hashKey);
         return alpha;
     }
 

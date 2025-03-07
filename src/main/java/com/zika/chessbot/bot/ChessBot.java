@@ -58,7 +58,7 @@ public class ChessBot {
 
                 for(Move move : moveOrderer.getOrderedMoves(board, bestMove, killerMoves, null)) {
                     board.doMove(move);
-                    int score = -negamax(depth - 1, alpha, beta, 0, MATE_SCORE, board, killerMoves);
+                    int score = -negamax(depth * 2 - 2, alpha, beta, 0, MATE_SCORE, board, killerMoves);
                     board.undoMove();
 
                     if(score > bestScore) {
@@ -89,7 +89,7 @@ public class ChessBot {
     }
 
     private int negamax(
-            int depth,
+            double halfPlyDepth,
             int alpha,
             int beta,
             int totalExtensions,
@@ -97,18 +97,20 @@ public class ChessBot {
             Board board,
             KillerMoves killerMoves
     ) {
-        if(depth == 0) {
+        if(halfPlyDepth <= 0) {
             return quiescenceSearch(alpha, beta, board);
         }
 
+        int fullPlyDepth = (int) (halfPlyDepth / 2);
+
         long hashKey = zorbrist.generateHash(board);
-        int transpositionLookup = tTable.lookupEvaluation(depth, alpha, beta, hashKey);
+        int transpositionLookup = tTable.lookupEvaluation(fullPlyDepth, alpha, beta, hashKey);
 
         if(transpositionLookup != LOOKUP_FAILED) {
             return transpositionLookup;
         }
 
-        List<Move> moves = moveOrderer.getOrderedMoves(board, null, killerMoves, depth);
+        List<Move> moves = moveOrderer.getOrderedMoves(board, null, killerMoves, fullPlyDepth);
 
         if(moves.isEmpty()) {
             if(board.isKingAttacked()) {
@@ -128,19 +130,19 @@ public class ChessBot {
             int score;
 
             if(pvNode) {
-                score = -negamax(depth - 1 + extension, -alpha - 1, -alpha, totalExtensions + extension, mate - 1, board, killerMoves);
+                score = -negamax(halfPlyDepth - 2 + extension, -alpha - 1, -alpha, totalExtensions + extension, mate - 1, board, killerMoves);
 
                 if(score > alpha && score < beta)
-                    score = -negamax(depth - 1 + extension, -beta, -alpha, totalExtensions + extension, mate - 1, board, killerMoves);
+                    score = -negamax(halfPlyDepth - 2 + extension, -beta, -alpha, totalExtensions + extension, mate - 1, board, killerMoves);
             } else {
-                score = -negamax(depth - 1 + extension, -beta, -alpha, totalExtensions + extension, mate - 1, board, killerMoves);
+                score = -negamax(halfPlyDepth - 2 + extension, -beta, -alpha, totalExtensions + extension, mate - 1, board, killerMoves);
             }
             
             board.undoMove();
 
             if(score >= beta) {
-                tTable.setEntry(hashKey, Flag.LOWERBOUND, move, beta, depth);
-                killerMoves.storeKillerMove(move, depth, board);
+                tTable.setEntry(hashKey, Flag.LOWERBOUND, move, beta, fullPlyDepth);
+                killerMoves.storeKillerMove(move, fullPlyDepth, board);
                 return beta;
             }
 
@@ -152,7 +154,7 @@ public class ChessBot {
             }
         }
 
-        tTable.setEntry(hashKey, flag, bestMove, alpha, depth);
+        tTable.setEntry(hashKey, flag, bestMove, alpha, fullPlyDepth);
         return alpha;
     }
 
@@ -163,7 +165,7 @@ public class ChessBot {
             if(board.isKingAttacked()) extension = 1;
         }
 
-        return extension;
+        return extension * 2;
     }
 
     private int quiescenceSearch(int alpha, int beta, Board board) {

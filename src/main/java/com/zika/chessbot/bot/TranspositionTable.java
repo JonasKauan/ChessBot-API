@@ -4,42 +4,39 @@ import java.util.Map;
 
 import java.util.HashMap;
 
-import com.github.bhlangonijr.chesslib.Board;
+import com.github.bhlangonijr.chesslib.move.Move;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
 
+@Slf4j
+@Service
 public class TranspositionTable {
-    private final Map<Long, TranspositionEntry> map;
+    private final Map<Long, TranspositionEntry> table;
     private final long tableSize;
     private static final int LOOKUP_FAILED = Integer.MIN_VALUE;
 
     public TranspositionTable(){
-        this.map = new HashMap<>();
-        this.tableSize = 1024 * 1024 * 1024;
+        this.table = new HashMap<>();
+        this.tableSize = 64 * 1024 * 1024;
     }
 
-    public int lookupEvaluation(Board board, int depth, int alpha, int beta, long hashKey){
-        TranspositionEntry entry = this.getEntry(hashKey % this.tableSize);
-        
-        if(this.hasEntry(hashKey % this.tableSize) && entry.getKey() == hashKey){
-            if(entry.getDepth() >= depth){
-                if(entry.getFlag() == Flag.EXACT) return entry.getScore();
-                if(entry.getFlag() == Flag.UPPERBOUND && entry.getScore() <= alpha) return alpha;
-                if(entry.getFlag() == Flag.UPPERBOUND && entry.getScore() >= beta) return beta;
+    public int lookupEvaluation(int depth, int alpha, int beta, long hashKey) {
+        long key = hashKey % tableSize;
+
+        if(table.containsKey(key)) {
+            TranspositionEntry entry = table.get(key);
+
+            if(entry.key() == hashKey && entry.depth() >= depth) {
+                if(entry.flag() == Flag.EXACT) return entry.score();
+                if(entry.flag() == Flag.UPPERBOUND && entry.score() <= alpha) return alpha;
+                if(entry.flag() == Flag.UPPERBOUND && entry.score() >= beta) return beta;
             }
         }
         
         return LOOKUP_FAILED;
     }
 
-    public void setEntry(Board board, Flag flag, int score, int depth, long hashKey){
-        TranspositionEntry entry = new TranspositionEntry(hashKey, flag, score, depth);
-        this.map.put(hashKey % this.tableSize, entry);
-    }
-
-    public TranspositionEntry getEntry(long hashCode){
-        return this.map.get(hashCode);
-    }
-
-    public boolean hasEntry(long hashCode){
-        return this.map.containsKey(hashCode);
+    public void setEntry(long hashKey, Flag flag, Move move, int score, int depth) {
+        this.table.put(hashKey % tableSize, new TranspositionEntry(hashKey, flag, move, score, depth));
     }
 }

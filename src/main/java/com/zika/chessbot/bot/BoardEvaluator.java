@@ -8,6 +8,8 @@ import com.zika.chessbot.bot.utils.RookUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.util.Optional;
+
 @Service
 @RequiredArgsConstructor
 public class BoardEvaluator {
@@ -84,7 +86,7 @@ public class BoardEvaluator {
     }
 
     public int evaluateCapture(Move move, Board board) {
-        int score = MVV_LVA(move, board);
+        int score = MVVLVA(move, board);
 
         if(BoardUtils.isSquareAttacked(move.getTo(), board)) {
             score -= Weights.valueOf(board.getPiece(move.getFrom()).toString()).getPieceWeight();
@@ -181,10 +183,39 @@ public class BoardEvaluator {
         return mobilityAfter - mobilityBefore;
     }
 
-    private int MVV_LVA(Move move, Board board) {
+    private int MVVLVA(Move move, Board board) {
         Weights capturedPieceWeight = Weights.valueOf(board.getPiece(move.getTo()).toString());
         Weights capturerPieceWeight = Weights.valueOf(board.getPiece(move.getFrom()).toString());
 
         return capturedPieceWeight.getPieceWeight() * 10 - capturerPieceWeight.getPieceWeight();
+    }
+
+    public int SEE(Move capture, Board board) {
+        int value = 0;
+        Piece piece = board.getPiece(capture.getTo());
+
+        if(piece == Piece.NONE) {
+            return value;
+        }
+
+        board.doMove(capture);
+
+        Move counterCapture = board.legalMoves()
+                .stream()
+                .filter(m -> m.getTo() == capture.getTo())
+                .findFirst()
+                .orElse(null);
+
+        int capturedPieceValue = Weights.valueOf(piece.toString()).getPieceWeight();
+
+        if(counterCapture == null) {
+            board.undoMove();
+            return capturedPieceValue;
+        }
+
+        value = Math.max(0, capturedPieceValue - SEE(counterCapture, board));
+        board.undoMove();
+
+        return value;
     }
 }

@@ -23,14 +23,14 @@ public class MoveOrderer {
     ){
         List<ScoredMove> scoredMoves = new ArrayList<>();
 
-        for(Move move : unorderedMoves){
+        for(Move move : unorderedMoves) {
             if(BoardUtils.captureMove(move, board)) {
                 scoredMoves.add(new ScoredMove(move, boardEvaluator.evaluateCapture(move, board)));
                 continue;
             }
 
             if(killerMoves != null && killerMoves.isKillerMove(move, depth)) {
-                scoredMoves.add(new ScoredMove(move, 10000));
+                scoredMoves.add(new ScoredMove(move, 10_000));
                 continue;
             }
 
@@ -59,12 +59,7 @@ public class MoveOrderer {
         return moves;
     }
 
-    public List<Move> getCaptures(Board board, Move bestMove, boolean bestCaptures) {
-        if(!bestCaptures) {
-            return orderMoveList(board, filterCaptures(board), null, null);
-        }
-
-        // TODO Como eu faço para pegar as melhores capturas aqui?
+    public List<Move> getCaptures(Board board, Move bestMove) {
         return orderMoveList(board, filterCaptures(board), null, null);
     }
 

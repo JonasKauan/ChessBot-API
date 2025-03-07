@@ -2,6 +2,7 @@ package com.zika.chessbot.bot;
 
 import com.github.bhlangonijr.chesslib.Board;
 import com.github.bhlangonijr.chesslib.Piece;
+import com.github.bhlangonijr.chesslib.Side;
 import com.github.bhlangonijr.chesslib.Square;
 import com.github.bhlangonijr.chesslib.move.Move;
 

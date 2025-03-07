@@ -83,7 +83,6 @@ public class OpeningBook {
             return Piece.NONE;
         }
 
-
         return Piece.fromValue(board.getSideToMove()+"_"+type);
     }
 

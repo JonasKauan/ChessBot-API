@@ -8,8 +8,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
-// TODO Implementar Aspiration window
-
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -24,6 +22,7 @@ public class ChessBot {
     private static final int MAX_NUMBER_EXTENSION = 16;
     private static final int MATE_SCORE = Integer.MAX_VALUE;
     private static final long TIME_TO_THINK = 100;
+    private static final int VAL_WINDOW = 50;
 
     public String decideMove(String fenString) {
         Board board = new Board();
@@ -43,16 +42,17 @@ public class ChessBot {
         Move bestMove = null;
 
         long searchStartTime = System.currentTimeMillis();
-        for(int depth = 1; true; depth++) {
+        for(int depth = 1; true;) {
             KillerMoves killerMoves = new KillerMoves();
-            double bestScore = -INFINITY;
+            int bestScore = -INFINITY;
 
             for(Move move : moveOrderer.getOrderedMoves(board, bestMove, killerMoves, null)) {
                 board.doMove(move);
-                double score = -negamax(depth - 1, alpha, beta, 0, MATE_SCORE, board, tTable, searchStartTime, killerMoves);
+                int score = -negamax(depth - 1, alpha, beta, 0, MATE_SCORE, board, tTable, searchStartTime, killerMoves);
                 board.undoMove();
 
                 if (score == MATE_SCORE || score == -MATE_SCORE) {
+                    log.info("Xeque-mate encontrado {}", bestMove);
                     return sanParser.parseToSan(board, move);
                 }
 
@@ -62,10 +62,20 @@ public class ChessBot {
                     return sanParser.parseToSan(board, bestMove);
                 }
 
+                if(score <= alpha || score >= beta) {
+                    alpha = -INFINITY;
+                    beta = INFINITY;
+                    continue;
+                }
+
                 if(score >= bestScore) {
                     bestMove = move;
                     bestScore = score;
                 }
+
+                alpha = score - VAL_WINDOW;
+                beta = score + VAL_WINDOW;
+                depth++;
             }
         }
     }

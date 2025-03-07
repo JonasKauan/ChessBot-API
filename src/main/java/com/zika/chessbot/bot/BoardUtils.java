@@ -13,12 +13,12 @@ public class BoardUtils {
         return board.getPiece(move.getTo()) != Piece.NONE;
     }
 
-    public static boolean isSquareAttacked(Move move, Board board){
-        board.doMove(move);
+    public static boolean isSquareAttacked(Square square, Board board) {
+        board.doNullMove();
 
         long attackCount = board.legalMoves()
                 .stream()
-                .filter(m -> m.getTo() == move.getTo())
+                .filter(m -> m.getTo() == square)
                 .count();
 
         board.undoMove();

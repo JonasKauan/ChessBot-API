@@ -3,6 +3,7 @@ package com.zika.chessbot.bot;
 import java.util.List;
 
 import com.github.bhlangonijr.chesslib.Board;
+import com.github.bhlangonijr.chesslib.Piece;
 import com.github.bhlangonijr.chesslib.move.Move;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -120,13 +121,17 @@ public class ChessBot {
         boolean pvNode = false;
 
         for(Move move : moves) {
+            Piece capturedPiece = board.getPiece(move.getTo());
+
             board.doMove(move);
-            int extension = calculateSearchExtension(move, totalExtensions, board);
+            int extension = calculateSearchExtension(capturedPiece, move, totalExtensions, board, pvNode);
             int score;
 
             if(pvNode) {
                 score = -negamax(depth - 1 + extension, -alpha - 1, -alpha, totalExtensions + extension, mate - 1, board, tTable, searchStartTime, killerMoves);
-                if(score > alpha && score < beta) score = -negamax(depth - 1 + extension, -beta, -alpha, totalExtensions + extension, mate - 1, board, tTable, searchStartTime, killerMoves);
+
+                if(score > alpha && score < beta)
+                    score = -negamax(depth - 1 + extension, -beta, -alpha, totalExtensions + extension, mate - 1, board, tTable, searchStartTime, killerMoves);
             } else {
                 score = -negamax(depth - 1 + extension, -beta, -alpha, totalExtensions + extension, mate - 1, board, tTable, searchStartTime, killerMoves);
             }
@@ -158,11 +163,14 @@ public class ChessBot {
         return System.currentTimeMillis() - searchStartTime > TIME_TO_THINK;
     }
 
-    private int calculateSearchExtension(Move move, int totalExtensions, Board board) {
+    private int calculateSearchExtension(Piece capturedPiece, Move move, int totalExtensions, Board board, boolean pvNode) {
         int extension = 0;
 
         if(totalExtensions < MAX_NUMBER_EXTENSION){
             if(board.isKingAttacked()) extension = 1;
+            if(pvNode) extension = 1;
+            if(capturedPiece != Piece.NONE && BoardUtils.isSquareAttacked(move.getTo(), board)) extension = 1;
+            if(move.getPromotion() != Piece.NONE) extension = 1;
         }
 
         return extension;

@@ -86,7 +86,7 @@ public class BoardEvaluator {
     public int evaluateCapture(Move move, Board board) {
         int score = MVV_LVA(move, board);
 
-        if(BoardUtils.isSquareAttacked(move, board)) {
+        if(BoardUtils.isSquareAttacked(move.getTo(), board)) {
             score -= Weights.valueOf(board.getPiece(move.getFrom()).toString()).getPieceWeight();
         }
 

@@ -1,29 +1,21 @@
 package com.zika.chessbot.bot;
 
-import com.github.bhlangonijr.chesslib.Board;
-import com.github.bhlangonijr.chesslib.CastleRight;
-import com.github.bhlangonijr.chesslib.Piece;
-import com.github.bhlangonijr.chesslib.PieceType;
-import com.github.bhlangonijr.chesslib.Side;
+import com.github.bhlangonijr.chesslib.*;
 import com.github.bhlangonijr.chesslib.move.Move;
 import org.springframework.stereotype.Service;
 
 @Service
 public class SanParser {
-    public String parseToSan(Board board, Move move){
+    public String parseToSan(Board board, Move move) {
         if(move == null) return "null";
 
         StringBuilder san = new StringBuilder();
         Piece piece = board.getPiece(move.getFrom());
         Piece capturedPiece = board.getPiece(move.getTo());
 
-        if( piece.getSanSymbol().equals("K") &&
-            (board.getCastleRight(Side.BLACK) != CastleRight.NONE ||
-            board.getCastleRight(Side.WHITE) != CastleRight.NONE)
-        ) {
-            if(move.getTo().toString().equals("G1") || move.getTo().toString().equals("G8")) return "O-O";
-    
-            if(move.getTo().toString().equals("C1") || move.getTo().toString().equals("C8")) return "O-O-O";
+        if(moveIsCastling(board, move, piece)) {
+            if(move.getTo() == Square.G1 || move.getTo() == Square.G8) return "O-O";
+            if(move.getTo() == Square.C1 || move.getTo() == Square.C8) return "O-O-O";
         }
                                     
         if(!piece.getSanSymbol().isEmpty()) san.append(piece.getSanSymbol());
@@ -55,6 +47,34 @@ public class SanParser {
         board.undoMove();
 
         return san.toString();
+    }
+
+    private boolean moveIsCastling(Board board, Move move, Piece piece) {
+        if(piece.getPieceType() != PieceType.KING) {
+            return false;
+        }
+
+        Side kingSide = piece.getPieceSide();
+
+        if(kingSide == Side.WHITE && move.getFrom() != Square.E1) {
+            return false;
+        }
+
+        if(kingSide == Side.BLACK && move.getFrom() != Square.E8) {
+            return false;
+        }
+
+        if(move.getTo() == Square.G1 || move.getTo() == Square.G8) {
+            return board.getCastleRight(kingSide) == CastleRight.KING_SIDE
+                    || board.getCastleRight(kingSide) == CastleRight.KING_AND_QUEEN_SIDE;
+        }
+
+        if(move.getTo() == Square.C1 || move.getTo() == Square.C8) {
+            return board.getCastleRight(kingSide) == CastleRight.QUEEN_SIDE
+                    || board.getCastleRight(kingSide) == CastleRight.KING_AND_QUEEN_SIDE;
+        }
+
+        return false;
     }
 
 }

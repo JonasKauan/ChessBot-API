@@ -1,9 +1,6 @@
 package com.zika.chessbot.bot;
 
-import com.github.bhlangonijr.chesslib.Board;
-import com.github.bhlangonijr.chesslib.Piece;
-import com.github.bhlangonijr.chesslib.PieceType;
-import com.github.bhlangonijr.chesslib.Square;
+import com.github.bhlangonijr.chesslib.*;
 import com.github.bhlangonijr.chesslib.move.Move;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -63,11 +60,9 @@ public class OpeningBook {
 
         Square[] squares = Square.values();
 
-        return new Move(
-                squares[getSquareIndex(from)],
-                squares[getSquareIndex(to)],
-                parsePromotion(promotion, board)
-        );
+        return isCatlingMove(squares[from], squares[to], board)
+            ? handleCastling(squares[from], squares[to])
+            : new Move(squares[from], squares[to], parsePromotion(promotion, board));
     }
 
     private Piece parsePromotion(int promotion, Board board) {
@@ -86,7 +81,29 @@ public class OpeningBook {
         return Piece.fromValue(board.getSideToMove()+"_"+type);
     }
 
-    private int getSquareIndex(int square) {
-        return (square % 8) + 8 * (square / 8);
+    private boolean isCatlingMove(Square from, Square to, Board board) {
+        Piece piece = board.getPiece(from);
+
+        if(piece.getPieceType() != PieceType.KING) {
+            return false;
+        }
+
+        if(piece.getPieceSide() == Side.WHITE) {
+            return from == Square.E1 && (to == Square.H1 || to == Square.A1);
+        }
+
+        return from == Square.E8 && (to == Square.H8 || to == Square.A8);
+    }
+
+    private Move handleCastling(Square from , Square to) {
+        Square castlingSquare = switch(to) {
+            case H1 -> Square.G1;
+            case A1 -> Square.C1;
+            case H8 -> Square.G8;
+            case A8 -> Square.C8;
+            default -> to;
+        };
+
+        return new Move(from, castlingSquare);
     }
 }

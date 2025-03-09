@@ -15,11 +15,11 @@ import java.util.concurrent.ThreadLocalRandom;
 @RequiredArgsConstructor
 public class OpeningBook {
     private final PolyglotBook book;
-    private final ZorbristHash zorbrist;
+    private final ZorbristHash zorbristHasher;
 
     public Move getOpeningMove(Board board) {
         List<BookEntry> entries = new ArrayList<>();
-        long hashCode = zorbrist.generateHash(board);
+        long hashCode = zorbristHasher.generateHash(board);
 
         for(BookEntry entry : book.getEntries()) {
             if(entry.key() == hashCode) {

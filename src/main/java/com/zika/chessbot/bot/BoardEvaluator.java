@@ -45,7 +45,7 @@ public class BoardEvaluator {
         return evaluation * (board.getSideToMove() == Side.WHITE ? 1 : -1);
     }
 
-    public int calculateContemptFactor(Board board){
+    public int calculateContemptFactor(Board board) {
         double contempt = -.5;
         int evaluation = evaluate(board);
         return (int) (contempt * calculateEndGameWeigth(board) * (evaluation > 0 ? 1 : -1));

@@ -1,11 +1,10 @@
 package com.zika.chessbot.bot;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import com.github.bhlangonijr.chesslib.Board;
 import com.github.bhlangonijr.chesslib.Piece;
-import com.github.bhlangonijr.chesslib.PieceType;
-import com.github.bhlangonijr.chesslib.Rank;
 import com.github.bhlangonijr.chesslib.move.Move;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -21,7 +20,7 @@ public class ChessBot {
     private final SanParser sanParser;
     private final MoveOrderer moveOrderer;
     private final OpeningBook openingBook;
-    private final ZorbristHash zorbrist;
+    private final ZorbristHash zorbristHasher;
     private final TranspositionTable tTable;
     private static final int INFINITY = 200_000;
     private static final int LOOKUP_FAILED = Integer.MIN_VALUE;
@@ -43,10 +42,10 @@ public class ChessBot {
         int alpha = -INFINITY;
         int beta = INFINITY;
 
+        KillerMoves killerMoves = new KillerMoves();
         Move bestMove = null;
 
         long searchStartTime = System.currentTimeMillis();
-        KillerMoves killerMoves = new KillerMoves();
 
         for(int depth = 1; true; depth++) {
             int bestScore = -INFINITY;
@@ -64,13 +63,18 @@ public class ChessBot {
                 for(Move move : moveOrderer.getOrderedMoves(board, bestMove, killerMoves, null)) {
                     board.doMove(move);
                     double halfPlyDepth = depth * 2 - 2;
-                    int score = -negamax(halfPlyDepth, alpha, beta, 0, MATE_SCORE, board, killerMoves);
+                    List<Move> pv = new ArrayList<>(List.of(move));
+                    int score = -negamax(halfPlyDepth, alpha, beta, 0, MATE_SCORE, board, killerMoves, pv);
                     board.undoMove();
 
                     if(score > bestScore) {
                         bestMove = move;
                         bestScore = score;
                     }
+
+//                    if(depth > 1) {
+//                        log.info("PV movimento {}: {}", move, pv);
+//                    }
 
                     if(System.currentTimeMillis() - searchStartTime >= TIME_TO_THINK) {
                         log.info("Busca terminada após profundidade de {}", depth);
@@ -101,22 +105,26 @@ public class ChessBot {
             double totalExtensions,
             int mate,
             Board board,
-            KillerMoves killerMoves
+            KillerMoves killerMoves,
+            List<Move> pv
     ) {
         if(halfPlyDepth <= 0) {
             return quiescenceSearch(alpha, beta, board);
         }
 
         int fullPlyDepth = (int) (halfPlyDepth / 2);
+        long hashKey = zorbristHasher.generateHash(board);
 
-        long hashKey = zorbrist.generateHash(board);
-        int transpositionLookup = tTable.lookupEvaluation(fullPlyDepth, alpha, beta, hashKey);
+        TranspositionEntry entry = tTable.retrieveEntry(hashKey, fullPlyDepth);
 
-        if(transpositionLookup != LOOKUP_FAILED) {
-            return transpositionLookup;
+        if(entry != null) {
+            if(entry.flag() == Flag.EXACT) return entry.score();
+            if(entry.flag() == Flag.UPPERBOUND && entry.score() <= alpha) return alpha;
+            if(entry.flag() == Flag.UPPERBOUND && entry.score() >= beta) return beta;
         }
 
-        List<Move> moves = moveOrderer.getOrderedMoves(board, null, killerMoves, fullPlyDepth);
+        Move tableBestMove = entry != null ? entry.move() : null;
+        List<Move> moves = moveOrderer.getOrderedMoves(board, tableBestMove, killerMoves, fullPlyDepth);
 
         if(moves.isEmpty()) {
             if(board.isKingAttacked()) {
@@ -133,8 +141,8 @@ public class ChessBot {
         for(Move move : moves) {
             Piece capturedPiece = board.getPiece(move.getTo());
             boolean canRecapture = BoardUtils.isSquareAttacked(move.getTo(), board);
-            board.doMove(move);
 
+            board.doMove(move);
             double extension = calculateSearchExtension(totalExtensions, board, pvNode, capturedPiece, move, canRecapture);
             totalExtensions = Math.min(totalExtensions + extension, MAX_NUMBER_EXTENSION);
             double actualDepth = halfPlyDepth - 1 + extension;
@@ -142,14 +150,13 @@ public class ChessBot {
             int score;
 
             if(pvNode) {
-                score = -negamax(actualDepth, -alpha - 1, -alpha, totalExtensions, mate - 1, board, killerMoves);
+                score = -negamax(actualDepth, -alpha - 1, -alpha, totalExtensions, mate - 1, board, killerMoves, pv);
 
                 if(score > alpha && score < beta)
-                    score = -negamax(actualDepth, -beta, -alpha, totalExtensions, mate - 1, board, killerMoves);
+                    score = -negamax(actualDepth, -beta, -alpha, totalExtensions, mate - 1, board, killerMoves, pv);
             } else {
-                score = -negamax(actualDepth, -beta, -alpha, totalExtensions, mate - 1, board, killerMoves);
+                score = -negamax(actualDepth, -beta, -alpha, totalExtensions, mate - 1, board, killerMoves, pv);
             }
-            
             board.undoMove();
 
             if(score >= beta) {
@@ -163,6 +170,7 @@ public class ChessBot {
                 alpha = score;
                 bestMove = move;
                 pvNode = true;
+                pv.add(move);
             }
         }
 

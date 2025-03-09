@@ -8,8 +8,6 @@ import com.zika.chessbot.bot.utils.RookUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
-import java.util.Optional;
-
 @Service
 @RequiredArgsConstructor
 public class BoardEvaluator {
@@ -67,9 +65,44 @@ public class BoardEvaluator {
             score += pieceWeights.getPieceWeight();
             score += pieceWeights.getPositionWeight()[square.getRank().ordinal()][square.getFile().ordinal()];
             score += evaluateStrategicPosition(square, board);
+
+            if(piece.getPieceType() == PieceType.PAWN) {
+                if(isPassedPawn(square, board)) score += 50;
+                if(BoardUtils.isEndGame(board)) score += 10 / getDistanceToEndBoard(square, piece.getPieceSide());
+            }
         }
 
         return score;
+    }
+
+    private boolean isPassedPawn(Square square, Board board) {
+        Piece piece = board.getPiece(square);
+
+        String opSideFenChar = piece.getPieceSide() == Side.WHITE
+                ? piece.getFenSymbol().toLowerCase()
+                : piece.getFenSymbol().toUpperCase();
+
+        long enemyPawnBitBoard = board.getBitboard(Piece.fromFenSymbol(opSideFenChar));
+        long passedPawnMask = getPassedPawnMask(square);
+        return (passedPawnMask & enemyPawnBitBoard) == 0;
+    }
+
+    private long getPassedPawnMask(Square square) {
+        int rankIndex = square.getRank().ordinal() + 1;
+
+        long columnMask = BoardUtils.A_FILE_BIT_BOARD << square.getFile().ordinal()
+                ^ BoardUtils.A_FILE_BIT_BOARD << Math.max(0, square.getFile().ordinal() - 1)
+                ^ BoardUtils.A_FILE_BIT_BOARD << Math.min(7, square.getFile().ordinal() + 1);
+
+        return (-1L << 8 * rankIndex) & columnMask;
+    }
+
+    public int getDistanceToEndBoard(Square square, Side side) {
+        if(side == Side.WHITE) {
+            return 7 - square.getRank().ordinal();
+        }
+
+        return square.getRank().ordinal();
     }
 
     public double calculateEndGameWeigth(Board board) {

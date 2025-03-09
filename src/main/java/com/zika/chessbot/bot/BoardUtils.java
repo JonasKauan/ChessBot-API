@@ -2,13 +2,14 @@ package com.zika.chessbot.bot;
 
 import com.github.bhlangonijr.chesslib.Board;
 import com.github.bhlangonijr.chesslib.Piece;
-import com.github.bhlangonijr.chesslib.Side;
 import com.github.bhlangonijr.chesslib.Square;
 import com.github.bhlangonijr.chesslib.move.Move;
 
 import java.util.List;
 
 public class BoardUtils {
+
+    public static final long A_FILE_BIT_BOARD = 0X0101010101010101L;
 
     public static boolean captureMove(Move move, Board board) {
         return board.getPiece(move.getTo()) != Piece.NONE;
@@ -54,5 +55,19 @@ public class BoardUtils {
         }
 
         return material <= 2400;
+    }
+
+    public static void printBitBoard(long bitBoard) {
+        for(int rank = 7; rank >= 0; rank--) {
+            for(int file = 0; file < 8; file++) {
+                long actualSquare = 1L << (rank * 8 + file);
+                long bit = bitBoard & actualSquare;
+                System.out.print((bit != 0 ? 1 : 0) + " ");
+            }
+
+            System.out.println();
+        }
+
+        System.out.println();
     }
 }

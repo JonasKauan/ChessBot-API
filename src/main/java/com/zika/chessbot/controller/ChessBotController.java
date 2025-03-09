@@ -6,8 +6,6 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
 
-import static org.springframework.http.ResponseEntity.ok;
-
 @CrossOrigin
 @RestController
 @RequestMapping("/bot")

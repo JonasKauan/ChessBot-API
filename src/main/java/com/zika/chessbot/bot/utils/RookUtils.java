@@ -1,38 +1,31 @@
 package com.zika.chessbot.bot.utils;
 
 import com.github.bhlangonijr.chesslib.*;
+import com.zika.chessbot.bot.BoardUtils;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 @Service
+@RequiredArgsConstructor
 public class RookUtils {
+    private final BitBoardUtils bitBoardUtils;
 
     public double getFileOpenness(Square square, Board board) {
-        double fileOpenness = 1.;
-        int direction = board.getSideToMove() == Side.WHITE ? 1 : -1;
+        Side pieceSide = board.getPiece(square).getPieceSide();
+        String opSideFenChar = pieceSide == Side.WHITE ? "p" : "P";
 
-        Square[] squares = Square.values();
+        long rookFileMask = bitBoardUtils.getRookOpenFileMask(square, pieceSide);
+        long enemyPawnBitBoard = board.getBitboard(Piece.fromFenSymbol(opSideFenChar));
+        long friendlyPieceBitBoard = board.getBitboard(pieceSide);
 
-        for(int i = 1; i < 8; i++) {
-            int actualSquareIndex = square.ordinal() + 8 * i * direction;
-
-            if(actualSquareIndex >= squares.length || actualSquareIndex < 0) {
-                break;
-            }
-
-            Piece piece = board.getPiece(squares[actualSquareIndex]);
-
-            if(piece != Piece.NONE) {
-                if(piece.getPieceSide() == board.getSideToMove()) {
-                    fileOpenness = 0.;
-                    break;
-                }
-
-                if(piece.getPieceType() == PieceType.PAWN) {
-                    fileOpenness = .5;
-                }
-            }
+        if((rookFileMask & friendlyPieceBitBoard) != 0) {
+            return 0.;
         }
 
-        return fileOpenness;
+        if((rookFileMask & enemyPawnBitBoard) != 0) {
+            return .5;
+        }
+
+        return 1.;
     }
 }

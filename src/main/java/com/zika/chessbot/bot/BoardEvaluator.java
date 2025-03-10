@@ -3,6 +3,7 @@ package com.zika.chessbot.bot;
 import com.github.bhlangonijr.chesslib.*;
 import com.github.bhlangonijr.chesslib.move.Move;
 import com.zika.chessbot.bot.utils.BishopUtils;
+import com.zika.chessbot.bot.utils.BitBoardUtils;
 import com.zika.chessbot.bot.utils.KingUtils;
 import com.zika.chessbot.bot.utils.RookUtils;
 import lombok.RequiredArgsConstructor;
@@ -37,6 +38,7 @@ public class BoardEvaluator {
     private final BishopUtils bishopUtils;
     private final RookUtils rookUtils;
     private final KingUtils kingUtils;
+    private final BitBoardUtils bitBoardUtils;
 
     public int evaluate(Board board) {
         int evaluation = calculateScore(board, Side.WHITE) - calculateScore(board, Side.BLACK);
@@ -83,24 +85,11 @@ public class BoardEvaluator {
                 : piece.getFenSymbol().toUpperCase();
 
         long enemyPawnBitBoard = board.getBitboard(Piece.fromFenSymbol(opSideFenChar));
-        long passedPawnMask = getPassedPawnMask(square, piece.getPieceSide());
+        long passedPawnMask = bitBoardUtils.getPassedPawnMask(square, piece.getPieceSide());
 
         return (passedPawnMask & enemyPawnBitBoard) == 0;
     }
 
-    private long getPassedPawnMask(Square square, Side side) {
-        long columnMask = BoardUtils.A_FILE_BIT_BOARD << square.getFile().ordinal()
-                | BoardUtils.A_FILE_BIT_BOARD << Math.max(0, square.getFile().ordinal() - 1)
-                | BoardUtils.A_FILE_BIT_BOARD << Math.min(7, square.getFile().ordinal() + 1);
-
-        if(side == Side.WHITE) {
-            return (-1L << 8 * (square.getRank().ordinal() + 1)) & columnMask;
-        }
-
-        int rankIndex = 8 - square.getRank().ordinal();
-
-        return (-1L >>> 8 * rankIndex) & columnMask;
-    }
 
     private int getDistanceToEndBoard(Square square, Side side) {
         if(side == Side.WHITE) {

@@ -11,6 +11,12 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 // TODO: Ele parece não estar achando o mate do jeito mais rápido, fazer algo a respeito
+// TODO: Aprimorar endgame
+// TODO: Procurar jeito de testar
+// TODO: Aprimorar velocidade na busca
+// TODO: Arrumar extensões
+// TODO: Melhorar avaliação do tabuleiro
+// TODO: Ver essa porra de PV
 
 @Slf4j
 @Service
@@ -23,7 +29,6 @@ public class ChessBot {
     private final ZorbristHash zorbristHasher;
     private final TranspositionTable tTable;
     private static final int INFINITY = 200_000;
-    private static final int LOOKUP_FAILED = Integer.MIN_VALUE;
     private static final int MAX_NUMBER_EXTENSION = 16;
     private static final int MATE_SCORE = Integer.MAX_VALUE;
     private static final long TIME_TO_THINK = 500;

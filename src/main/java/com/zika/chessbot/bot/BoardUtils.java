@@ -9,8 +9,6 @@ import java.util.List;
 
 public class BoardUtils {
 
-    public static final long A_FILE_BIT_BOARD = 0X0101010101010101L;
-
     public static boolean captureMove(Move move, Board board) {
         return board.getPiece(move.getTo()) != Piece.NONE;
     }

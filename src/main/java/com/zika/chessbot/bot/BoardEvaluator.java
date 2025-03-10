@@ -83,21 +83,26 @@ public class BoardEvaluator {
                 : piece.getFenSymbol().toUpperCase();
 
         long enemyPawnBitBoard = board.getBitboard(Piece.fromFenSymbol(opSideFenChar));
-        long passedPawnMask = getPassedPawnMask(square);
+        long passedPawnMask = getPassedPawnMask(square, piece.getPieceSide());
+
         return (passedPawnMask & enemyPawnBitBoard) == 0;
     }
 
-    private long getPassedPawnMask(Square square) {
-        int rankIndex = square.getRank().ordinal() + 1;
-
+    private long getPassedPawnMask(Square square, Side side) {
         long columnMask = BoardUtils.A_FILE_BIT_BOARD << square.getFile().ordinal()
-                ^ BoardUtils.A_FILE_BIT_BOARD << Math.max(0, square.getFile().ordinal() - 1)
-                ^ BoardUtils.A_FILE_BIT_BOARD << Math.min(7, square.getFile().ordinal() + 1);
+                | BoardUtils.A_FILE_BIT_BOARD << Math.max(0, square.getFile().ordinal() - 1)
+                | BoardUtils.A_FILE_BIT_BOARD << Math.min(7, square.getFile().ordinal() + 1);
 
-        return (-1L << 8 * rankIndex) & columnMask;
+        if(side == Side.WHITE) {
+            return (-1L << 8 * (square.getRank().ordinal() + 1)) & columnMask;
+        }
+
+        int rankIndex = 8 - square.getRank().ordinal();
+
+        return (-1L >>> 8 * rankIndex) & columnMask;
     }
 
-    public int getDistanceToEndBoard(Square square, Side side) {
+    private int getDistanceToEndBoard(Square square, Side side) {
         if(side == Side.WHITE) {
             return 7 - square.getRank().ordinal();
         }

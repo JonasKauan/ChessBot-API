@@ -70,7 +70,8 @@ public class BoardEvaluator {
 
             if(piece.getPieceType() == PieceType.PAWN) {
                 if(isPassedPawn(square, board)) score += 50;
-                if(BoardUtils.isEndGame(board)) score += 10 / getDistanceToEndBoard(square, piece.getPieceSide());
+                if(BoardUtils.isEndGame(board))
+                    score += 10 / BoardUtils.getDistanceToEndBoard(square, piece.getPieceSide());
             }
         }
 
@@ -88,15 +89,6 @@ public class BoardEvaluator {
         long passedPawnMask = bitBoardUtils.getPassedPawnMask(square, piece.getPieceSide());
 
         return (passedPawnMask & enemyPawnBitBoard) == 0;
-    }
-
-
-    private int getDistanceToEndBoard(Square square, Side side) {
-        if(side == Side.WHITE) {
-            return 7 - square.getRank().ordinal();
-        }
-
-        return square.getRank().ordinal();
     }
 
     public double calculateEndGameWeigth(Board board) {
@@ -136,20 +128,24 @@ public class BoardEvaluator {
     }
 
     private int evaluateStrategicPosition(Move move, Board board) {
+        Side side = board.getSideToMove();
+
         return switch(board.getPiece(move.getFrom()).getPieceType()) {
             case BISHOP -> evaluateDiagonalControl(move, board) + evaluateBlockPenalty(move.getTo(), board);
-            case ROOK -> evaluateFileControl(move.getTo(), board);
-            case QUEEN -> evaluateDiagonalControl(move, board) + evaluateFileControl(move.getTo(), board);
+            case ROOK -> evaluateFileControl(move.getTo(), side, board);
+            case QUEEN -> evaluateDiagonalControl(move, board) + evaluateFileControl(move.getTo(), side, board);
             case KING -> evaluateKingSafety(move.getTo(), board);
             default -> evaluateCenterControl(move.getTo(), move.getFrom());
         };
     }
 
     private int evaluateStrategicPosition(Square square, Board board) {
+        Side side = board.getSideToMove();
+
         return switch(board.getPiece(square).getPieceType()) {
             case BISHOP -> evaluateDiagonalControl(square, board) + evaluateBlockPenalty(square, board);
-            case ROOK -> evaluateFileControl(square, board);
-            case QUEEN -> evaluateDiagonalControl(square, board) + evaluateFileControl(square, board);
+            case ROOK -> evaluateFileControl(square, side, board);
+            case QUEEN -> evaluateDiagonalControl(square, board) + evaluateFileControl(square, side, board);
             case KING -> evaluateKingSafety(square, board);
             default -> evaluateCenterControl(square);
         };
@@ -163,8 +159,8 @@ public class BoardEvaluator {
         return kingUtils.countAttackersNearKingZone(square, board) * -20;
     }
 
-    private int evaluateFileControl(Square square, Board board) {
-        return (int) (rookUtils.getFileOpenness(square, board) * 30);
+    private int evaluateFileControl(Square square, Side side, Board board) {
+        return (int) (rookUtils.getFileOpenness(square, side, board) * 30);
     }
 
     private int evaluateBlockPenalty(Square square, Board board) {

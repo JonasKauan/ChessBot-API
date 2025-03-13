@@ -2,6 +2,7 @@ package com.zika.chessbot.bot;
 
 import com.github.bhlangonijr.chesslib.Board;
 import com.github.bhlangonijr.chesslib.Piece;
+import com.github.bhlangonijr.chesslib.Side;
 import com.github.bhlangonijr.chesslib.Square;
 import com.github.bhlangonijr.chesslib.move.Move;
 
@@ -11,6 +12,14 @@ public class BoardUtils {
 
     public static boolean captureMove(Move move, Board board) {
         return board.getPiece(move.getTo()) != Piece.NONE;
+    }
+
+    public static int getDistanceToEndBoard(Square square, Side side) {
+        if(side == Side.WHITE) {
+            return 7 - square.getRank().ordinal();
+        }
+
+        return square.getRank().ordinal();
     }
 
     public static boolean isSquareAttacked(Square square, Board board) {

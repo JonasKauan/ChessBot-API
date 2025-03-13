@@ -1,7 +1,6 @@
 package com.zika.chessbot.bot.utils;
 
 import com.github.bhlangonijr.chesslib.*;
-import com.zika.chessbot.bot.BoardUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -10,8 +9,7 @@ import org.springframework.stereotype.Service;
 public class RookUtils {
     private final BitBoardUtils bitBoardUtils;
 
-    public double getFileOpenness(Square square, Board board) {
-        Side pieceSide = board.getPiece(square).getPieceSide();
+    public double getFileOpenness(Square square, Side pieceSide, Board board) {
         String opSideFenChar = pieceSide == Side.WHITE ? "p" : "P";
 
         long rookFileMask = bitBoardUtils.getRookOpenFileMask(square, pieceSide);

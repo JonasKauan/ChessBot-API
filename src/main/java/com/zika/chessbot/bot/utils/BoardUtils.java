@@ -1,10 +1,11 @@
-package com.zika.chessbot.bot;
+package com.zika.chessbot.bot.utils;
 
 import com.github.bhlangonijr.chesslib.Board;
 import com.github.bhlangonijr.chesslib.Piece;
 import com.github.bhlangonijr.chesslib.Side;
 import com.github.bhlangonijr.chesslib.Square;
 import com.github.bhlangonijr.chesslib.move.Move;
+import com.zika.chessbot.bot.Weights;
 
 import java.util.List;
 

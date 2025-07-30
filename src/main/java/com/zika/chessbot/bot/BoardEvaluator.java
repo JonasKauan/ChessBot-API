@@ -2,10 +2,7 @@ package com.zika.chessbot.bot;
 
 import com.github.bhlangonijr.chesslib.*;
 import com.github.bhlangonijr.chesslib.move.Move;
-import com.zika.chessbot.bot.utils.BishopUtils;
-import com.zika.chessbot.bot.utils.BitBoardUtils;
-import com.zika.chessbot.bot.utils.KingUtils;
-import com.zika.chessbot.bot.utils.RookUtils;
+import com.zika.chessbot.bot.utils.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -135,7 +132,8 @@ public class BoardEvaluator {
             case ROOK -> evaluateFileControl(move.getTo(), side, board);
             case QUEEN -> evaluateDiagonalControl(move, board) + evaluateFileControl(move.getTo(), side, board);
             case KING -> evaluateKingSafety(move.getTo(), board);
-            default -> evaluateCenterControl(move.getTo(), move.getFrom());
+            default -> evaluateCenterControl(move.getTo(), move.getFrom())
+                    + evaluatePawnPositionPenalties(move.getFrom(), board);
         };
     }
 
@@ -147,7 +145,7 @@ public class BoardEvaluator {
             case ROOK -> evaluateFileControl(square, side, board);
             case QUEEN -> evaluateDiagonalControl(square, board) + evaluateFileControl(square, side, board);
             case KING -> evaluateKingSafety(square, board);
-            default -> evaluateCenterControl(square);
+            default -> evaluateCenterControl(square) + evaluatePawnPositionPenalties(square, board);
         };
     }
 
@@ -161,6 +159,20 @@ public class BoardEvaluator {
 
     private int evaluateFileControl(Square square, Side side, Board board) {
         return (int) (rookUtils.getFileOpenness(square, side, board) * 30);
+    }
+
+    private int evaluatePawnPositionPenalties(Square square, Board board) {
+        Piece friendlyPawnPiece = Piece.fromFenSymbol(board.getSideToMove() == Side.WHITE ? "P" : "p");
+        long friendlyPawnsBitBoard = board.getBitboard(friendlyPawnPiece);
+        long pawnAreaBitBoard = bitBoardUtils.getPawnProtectionSquaresMask(square);
+
+        int penalty = 0;
+
+        if((friendlyPawnsBitBoard & pawnAreaBitBoard) == 0) {
+            penalty -= 100;
+        }
+
+        return penalty;
     }
 
     private int evaluateBlockPenalty(Square square, Board board) {

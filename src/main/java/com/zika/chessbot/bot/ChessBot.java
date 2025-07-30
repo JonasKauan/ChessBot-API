@@ -6,6 +6,7 @@ import java.util.List;
 import com.github.bhlangonijr.chesslib.Board;
 import com.github.bhlangonijr.chesslib.Piece;
 import com.github.bhlangonijr.chesslib.move.Move;
+import com.zika.chessbot.bot.utils.BoardUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -28,10 +29,10 @@ public class ChessBot {
     private final OpeningBook openingBook;
     private final ZorbristHash zorbristHasher;
     private final TranspositionTable tTable;
-    private static final int INFINITY = 200_000;
-    private static final int MAX_NUMBER_EXTENSION = 16;
     private static final int MATE_SCORE = Integer.MAX_VALUE;
+    private static final int MAX_NUMBER_EXTENSION = 16;
     private static final long TIME_TO_THINK = 500;
+    private static final int INFINITY = 200_000;
     private static final int VAL_WINDOW = 50;
 
     public String decideMove(String fenString) {
@@ -68,18 +69,13 @@ public class ChessBot {
                 for(Move move : moveOrderer.getOrderedMoves(board, bestMove, killerMoves, null)) {
                     board.doMove(move);
                     double halfPlyDepth = depth * 2 - 2;
-                    List<Move> pv = new ArrayList<>(List.of(move));
-                    int score = -negamax(halfPlyDepth, alpha, beta, 0, MATE_SCORE, board, killerMoves, pv);
+                    int score = -negamax(halfPlyDepth, alpha, beta, 0, MATE_SCORE, board, killerMoves);
                     board.undoMove();
 
                     if(score > bestScore) {
                         bestMove = move;
                         bestScore = score;
                     }
-
-//                    if(depth > 1) {
-//                        log.info("PV movimento {}: {}", move, pv);
-//                    }
 
                     if(System.currentTimeMillis() - searchStartTime >= TIME_TO_THINK) {
                         log.info("Busca terminada após profundidade de {}", depth);
@@ -110,8 +106,7 @@ public class ChessBot {
             double totalExtensions,
             int mate,
             Board board,
-            KillerMoves killerMoves,
-            List<Move> pv
+            KillerMoves killerMoves
     ) {
         if(halfPlyDepth <= 0) {
             return quiescenceSearch(alpha, beta, board);
@@ -155,12 +150,12 @@ public class ChessBot {
             int score;
 
             if(pvNode) {
-                score = -negamax(actualDepth, -alpha - 1, -alpha, totalExtensions, mate - 1, board, killerMoves, pv);
+                score = -negamax(actualDepth, -alpha - 1, -alpha, totalExtensions, mate - 1, board, killerMoves);
 
                 if(score > alpha && score < beta)
-                    score = -negamax(actualDepth, -beta, -alpha, totalExtensions, mate - 1, board, killerMoves, pv);
+                    score = -negamax(actualDepth, -beta, -alpha, totalExtensions, mate - 1, board, killerMoves);
             } else {
-                score = -negamax(actualDepth, -beta, -alpha, totalExtensions, mate - 1, board, killerMoves, pv);
+                score = -negamax(actualDepth, -beta, -alpha, totalExtensions, mate - 1, board, killerMoves);
             }
             board.undoMove();
 
@@ -175,7 +170,6 @@ public class ChessBot {
                 alpha = score;
                 bestMove = move;
                 pvNode = true;
-                pv.add(move);
             }
         }
 

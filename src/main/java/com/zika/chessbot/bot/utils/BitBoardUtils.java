@@ -27,6 +27,10 @@ public class BitBoardUtils {
         return squareMask ^ diagonalMask;
     }
 
+    public long getPawnProtectionSquaresMask(Square square) {
+        return -1L;
+    }
+
     private long getSecondaryDiagonalMask(long squareMask, Square square) {
         for(int i = 1; i < Math.min(square.getRank().ordinal(), 7 - square.getFile().ordinal()); i++) {
             squareMask |= squareMask >> 7 * i & 0xFEFEFEFEFEFEFEFEL;

@@ -2,7 +2,6 @@ package com.zika.chessbot.bot.utils;
 
 import com.github.bhlangonijr.chesslib.Board;
 import com.github.bhlangonijr.chesslib.Square;
-import com.zika.chessbot.bot.BoardUtils;
 import org.springframework.stereotype.Service;
 
 @Service

@@ -7,6 +7,7 @@ import java.util.function.Predicate;
 import com.github.bhlangonijr.chesslib.Board;
 import com.github.bhlangonijr.chesslib.Piece;
 import com.github.bhlangonijr.chesslib.move.Move;
+import com.zika.chessbot.bot.utils.BoardUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 

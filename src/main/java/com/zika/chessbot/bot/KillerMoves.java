@@ -2,6 +2,7 @@ package com.zika.chessbot.bot;
 
 import com.github.bhlangonijr.chesslib.Board;
 import com.github.bhlangonijr.chesslib.move.Move;
+import com.zika.chessbot.bot.utils.BoardUtils;
 
 import java.util.HashMap;
 import java.util.Map;

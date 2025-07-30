@@ -1,1 +1,1 @@
-# ChessBot-Zika-API
+# ChessBot-API

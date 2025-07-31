@@ -13,7 +13,6 @@ import org.springframework.stereotype.Service;
 
 // TODO: Ele parece não estar achando o mate do jeito mais rápido, fazer algo a respeito
 // TODO: Aprimorar endgame
-// TODO: Procurar jeito de testar
 // TODO: Aprimorar velocidade na busca
 // TODO: Arrumar extensões
 // TODO: Melhorar avaliação do tabuleiro

@@ -14,6 +14,7 @@ import java.util.concurrent.ThreadLocalRandom;
 @Service
 @RequiredArgsConstructor
 public class OpeningBook {
+    private static final boolean ENABLE_LOGS = false;
     private final PolyglotBook book;
     private final ZorbristHash zorbristHasher;
 
@@ -28,12 +29,19 @@ public class OpeningBook {
         }
 
         if(entries.isEmpty()) {
-            log.info("[OpeningBook.getOpeningMove] Não foi encontrada entrada no opening book para a posição");
+            if(ENABLE_LOGS) {
+                log.info("[OpeningBook.getOpeningMove] Não foi encontrada entrada no opening book para a posição");
+            }
+
             return null;
         }
 
         Move move = parsePolyglotMove(weightedRandomMove(entries), board);
-        log.info("[OpeningBook.getOpeningMove] Encontrada entrada no livro de aberturas: {}", move);
+
+        if(ENABLE_LOGS) {
+            log.info("[OpeningBook.getOpeningMove] Encontrada entrada no livro de aberturas: {}", move);
+        }
+
         return move;
     }
 

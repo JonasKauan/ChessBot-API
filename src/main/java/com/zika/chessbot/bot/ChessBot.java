@@ -33,6 +33,7 @@ public class ChessBot {
     private static final long TIME_TO_THINK = 500;
     private static final int INFINITY = 200_000;
     private static final int VAL_WINDOW = 50;
+    private static final boolean ENABLE_LOGS = false;
 
     public String decideMove(String fenString) {
         Board board = new Board();
@@ -77,8 +78,12 @@ public class ChessBot {
                     }
 
                     if(System.currentTimeMillis() - searchStartTime >= TIME_TO_THINK) {
-                        log.info("Busca terminada após profundidade de {}", depth);
-                        log.info("Melhor movimento encontrado {}", bestMove);
+
+                        if(ENABLE_LOGS) {
+                            log.info("Busca terminada após profundidade de {}", depth);
+                            log.info("Melhor movimento encontrado {}", bestMove);
+                        }
+
                         return sanParser.parseToSan(board, bestMove);
                     }
                 }

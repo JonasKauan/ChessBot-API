@@ -16,9 +16,9 @@ public class ChessBotController {
     private final ChessBot chessBot;
     private final TestSuiteService testSuiteService;
 
-    @GetMapping
+    @GetMapping("/movimento")
     public Map<String,String> calcularMovimento(@RequestParam String fenString) {
-        return Map.of("move", chessBot.decideMove(fenString));
+        return Map.of("move", chessBot.decideMove(fenString, true));
     }
 
     @GetMapping("/test-suites")

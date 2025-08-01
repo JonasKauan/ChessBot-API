@@ -28,23 +28,22 @@ public class ChessBot {
     private final OpeningBook openingBook;
     private final ZorbristHash zorbristHasher;
     private final TranspositionTable tTable;
-    private static final int MATE_SCORE = Integer.MAX_VALUE;
+    private static final int MATE_SCORE = 100_000_000;
     private static final int MAX_NUMBER_EXTENSION = 16;
     private static final long TIME_TO_THINK = 500;
     private static final int INFINITY = 200_000;
     private static final int VAL_WINDOW = 50;
-    private static final boolean ENABLE_LOGS = false;
 
-    public String decideMove(String fenString) {
+    public String decideMove(String fenString, boolean enableLogs) {
         Board board = new Board();
         board.loadFromFen(fenString);
 
-        Move openingMove = openingBook.getOpeningMove(board);
+        Move openingMove = openingBook.getOpeningMove(board, enableLogs);
 
-        return openingMove == null ? search(board) : sanParser.parseToSan(board, openingMove);
+        return openingMove == null ? search(board, enableLogs) : sanParser.parseToSan(board, openingMove);
     }
 
-    private String search(Board board) {
+    private String search(Board board, boolean enableLogs) {
         int alpha = -INFINITY;
         int beta = INFINITY;
 
@@ -53,52 +52,40 @@ public class ChessBot {
 
         long searchStartTime = System.currentTimeMillis();
 
-        for(int depth = 1; true; depth++) {
+        for(int depth = 1; true;) {
             int bestScore = -INFINITY;
-            int aspirationWindow = VAL_WINDOW;
 
-            boolean aspirationWindowAdjusted = false;
-            int failCount = 0;
+            for(Move move : moveOrderer.getOrderedMoves(board, bestMove, killerMoves, null)) {
+                board.doMove(move);
+                double halfPlyDepth = depth * 2 - 2;
+                int score = -negamax(halfPlyDepth, alpha, beta, 0, board, killerMoves);
+                board.undoMove();
 
-            while(!aspirationWindowAdjusted) {
-                if(failCount > 2) {
+                if(score > bestScore) {
+                    bestMove = move;
+                    bestScore = score;
+                }
+
+                if(System.currentTimeMillis() - searchStartTime >= TIME_TO_THINK) {
+                    String parsedMove = sanParser.parseToSan(board, bestMove);
+
+                    if(enableLogs) {
+                        log.info("Busca terminada após profundidade de {}", depth);
+                        log.info("Melhor movimento encontrado {}", parsedMove);
+                    }
+
+                    return parsedMove;
+                }
+
+                if(score <= alpha || score >= beta) {
                     alpha = -INFINITY;
                     beta = INFINITY;
-                }
-
-                for(Move move : moveOrderer.getOrderedMoves(board, bestMove, killerMoves, null)) {
-                    board.doMove(move);
-                    double halfPlyDepth = depth * 2 - 2;
-                    int score = -negamax(halfPlyDepth, alpha, beta, 0, MATE_SCORE, board, killerMoves);
-                    board.undoMove();
-
-                    if(score > bestScore) {
-                        bestMove = move;
-                        bestScore = score;
-                    }
-
-                    if(System.currentTimeMillis() - searchStartTime >= TIME_TO_THINK) {
-
-                        if(ENABLE_LOGS) {
-                            log.info("Busca terminada após profundidade de {}", depth);
-                            log.info("Melhor movimento encontrado {}", bestMove);
-                        }
-
-                        return sanParser.parseToSan(board, bestMove);
-                    }
-                }
-
-                if(bestScore <= alpha || bestScore >= beta) {
-                    alpha = bestScore - aspirationWindow;
-                    beta = bestScore + aspirationWindow;
-                    aspirationWindow += aspirationWindow / 2;
-                    failCount++;
                     continue;
                 }
 
                 alpha = bestScore - VAL_WINDOW;
                 beta = bestScore + VAL_WINDOW;
-                aspirationWindowAdjusted = true;
+                depth++;
             }
         }
     }
@@ -108,7 +95,6 @@ public class ChessBot {
             int alpha,
             int beta,
             double totalExtensions,
-            int mate,
             Board board,
             KillerMoves killerMoves
     ) {
@@ -117,6 +103,14 @@ public class ChessBot {
         }
 
         int fullPlyDepth = (int) (halfPlyDepth / 2);
+
+        if(board.isMated()) {
+            //System.out.println("Estou chegando no mate " + fullPlyDepth);
+            return (int) -(MATE_SCORE - halfPlyDepth);
+        }
+
+        //System.out.println(fullPlyDepth);
+
         long hashKey = zorbristHasher.generateHash(board);
 
         TranspositionEntry entry = tTable.retrieveEntry(hashKey, fullPlyDepth);
@@ -131,10 +125,6 @@ public class ChessBot {
         List<Move> moves = moveOrderer.getOrderedMoves(board, tableBestMove, killerMoves, fullPlyDepth);
 
         if(moves.isEmpty()) {
-            if(board.isKingAttacked()) {
-                return -mate;
-            }
-
             return boardEvaluator.calculateContemptFactor(board);
         }
 
@@ -154,12 +144,12 @@ public class ChessBot {
             int score;
 
             if(pvNode) {
-                score = -negamax(actualDepth, -alpha - 1, -alpha, totalExtensions, mate - 1, board, killerMoves);
+                score = -negamax(actualDepth, -alpha - 1, -alpha, totalExtensions, board, killerMoves);
 
                 if(score > alpha && score < beta)
-                    score = -negamax(actualDepth, -beta, -alpha, totalExtensions, mate - 1, board, killerMoves);
+                    score = -negamax(actualDepth, -beta, -alpha, totalExtensions, board, killerMoves);
             } else {
-                score = -negamax(actualDepth, -beta, -alpha, totalExtensions, mate - 1, board, killerMoves);
+                score = -negamax(actualDepth, -beta, -alpha, totalExtensions, board, killerMoves);
             }
             board.undoMove();
 
@@ -193,14 +183,14 @@ public class ChessBot {
 
         if(totalExtensions < MAX_NUMBER_EXTENSION) {
             if(board.isKingAttacked()) {
-                extension = board.legalMoves().size() > 1 ? .5 : 1;
+                extension = 1;
             }
 
             // TODO: Fazer essas extenções de um jeito mais inteligente
 
-//            if(pvNode) {
-//                extension = Math.max(extension, .5);
-//            }
+            if(pvNode) {
+                extension = Math.max(extension, .5);
+            }
 //
 //            if(capturedPiece != Piece.NONE && canRecapture) {
 //                extension = 1;

@@ -15,7 +15,7 @@ public class KillerMoves {
     }
 
     public void storeKillerMove(Move move, int depth, Board board) {
-        if(BoardUtils.captureMove(move, board)) {
+        if(BoardUtils.isCaptureMove(move, board)) {
             return;
         }
 

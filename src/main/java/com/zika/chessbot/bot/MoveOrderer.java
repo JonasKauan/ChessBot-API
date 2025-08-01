@@ -6,6 +6,7 @@ import java.util.function.Predicate;
 
 import com.github.bhlangonijr.chesslib.Board;
 import com.github.bhlangonijr.chesslib.Piece;
+import com.github.bhlangonijr.chesslib.Square;
 import com.github.bhlangonijr.chesslib.move.Move;
 import com.zika.chessbot.bot.utils.BoardUtils;
 import lombok.RequiredArgsConstructor;
@@ -14,6 +15,8 @@ import org.springframework.stereotype.Service;
 @Service
 @RequiredArgsConstructor
 public class MoveOrderer {
+    private static final int MATE_SCORE = 100_000_000;
+    private static final int KILLER_MOVE_SCORE = 10_000;
     private final BoardEvaluator boardEvaluator;
 
     private List<Move> orderMoveList(
@@ -24,21 +27,42 @@ public class MoveOrderer {
     ){
         List<ScoredMove> scoredMoves = new ArrayList<>();
 
+        boolean printar = false;
+
         for(Move move : unorderedMoves) {
-            if(BoardUtils.captureMove(move, board)) {
-                scoredMoves.add(new ScoredMove(move, boardEvaluator.evaluateCapture(move, board)));
-                continue;
-            }
-
             if(killerMoves != null && killerMoves.isKillerMove(move, depth)) {
-                scoredMoves.add(new ScoredMove(move, 10_000));
+                scoredMoves.add(new ScoredMove(move, KILLER_MOVE_SCORE));
                 continue;
             }
 
-            scoredMoves.add(new ScoredMove(move, boardEvaluator.evaluateQuietMove(move, board)));
+            if(BoardUtils.isMateMove(board, move)) {
+                if(
+                    move.getTo() == Square.D1
+                    && move.getFrom() == Square.D6
+                    && board.getPiece(move.getFrom()) == Piece.BLACK_QUEEN
+                ) {
+                    printar = true;
+                    //System.out.println("não fui esquecido haha " + board.getSideToMove());
+                }
+
+                scoredMoves.add(new ScoredMove(move, MATE_SCORE));
+                continue;
+            }
+
+            int score = BoardUtils.isCaptureMove(move, board)
+                    ? boardEvaluator.evaluateCapture(move, board)
+                    : boardEvaluator.evaluateQuietMove(move, board);
+
+            scoredMoves.add(new ScoredMove(move, score));
         }
 
-        return quickSort(scoredMoves).stream().map(ScoredMove::move).toList();
+        List<Move> orderedMoves = quickSort(scoredMoves).stream().map(ScoredMove::move).toList();
+
+        if(printar) {
+            //System.out.println(orderedMoves);
+        }
+
+        return orderedMoves;
     }
 
     public List<Move> getOrderedMoves(Board board, Move bestMove, KillerMoves killerMoves, Integer depth) {

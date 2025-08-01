@@ -11,8 +11,15 @@ import java.util.List;
 
 public class BoardUtils {
 
-    public static boolean captureMove(Move move, Board board) {
+    public static boolean isCaptureMove(Move move, Board board) {
         return board.getPiece(move.getTo()) != Piece.NONE;
+    }
+
+    public static boolean isMateMove(Board board, Move move) {
+        board.doMove(move);
+        boolean isMate = board.isMated();
+        board.undoMove();
+        return isMate;
     }
 
     public static int getDistanceToEndBoard(Square square, Side side) {

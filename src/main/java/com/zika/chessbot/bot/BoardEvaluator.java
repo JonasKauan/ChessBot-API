@@ -32,6 +32,9 @@ public class BoardEvaluator {
             {0, 0, 0, 0, 0, 0, 0, 0}
     };
 
+    private static final int MATE_SCORE = 100_000_000;
+    private static final int MAX_EVAL = MATE_SCORE - 1000;
+
     private final BishopUtils bishopUtils;
     private final RookUtils rookUtils;
     private final KingUtils kingUtils;
@@ -39,13 +42,14 @@ public class BoardEvaluator {
 
     public int evaluate(Board board) {
         int evaluation = calculateScore(board, Side.WHITE) - calculateScore(board, Side.BLACK);
+        evaluation = Math.max(-MAX_EVAL, Math.min(MAX_EVAL, evaluation));
         return evaluation * (board.getSideToMove() == Side.WHITE ? 1 : -1);
     }
 
     public int calculateContemptFactor(Board board) {
         double contempt = -.5;
         int evaluation = evaluate(board);
-        return (int) (contempt * calculateEndGameWeigth(board) * (evaluation > 0 ? 1 : -1));
+        return (int) (contempt * calculateEndGameWeigth(board) * Math.signum(evaluation));
     }
 
     private int calculateScore(Board board, Side side) {

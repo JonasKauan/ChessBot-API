@@ -32,7 +32,7 @@ public class BoardEvaluator {
             {0, 0, 0, 0, 0, 0, 0, 0}
     };
 
-    private static final int MATE_SCORE = 100_000_000;
+    private static final int MATE_SCORE = 100_000;
     private static final int MAX_EVAL = MATE_SCORE - 1000;
 
     private final BishopUtils bishopUtils;

@@ -28,18 +28,16 @@ public class ChessBot {
     private final OpeningBook openingBook;
     private final ZorbristHash zorbristHasher;
     private final TranspositionTable tTable;
-    private static final int MATE_SCORE = 100_000_000;
     private static final int MAX_NUMBER_EXTENSION = 16;
-    private static final long TIME_TO_THINK = 500;
-    private static final int INFINITY = 200_000;
+    private static final int MATE_SCORE = 100_000;
+    private static final int INFINITY = MATE_SCORE * 2;
+    private static final long TIME_TO_THINK = 60_000;
     private static final int VAL_WINDOW = 50;
 
     public String decideMove(String fenString, boolean enableLogs) {
         Board board = new Board();
         board.loadFromFen(fenString);
-
         Move openingMove = openingBook.getOpeningMove(board, enableLogs);
-
         return openingMove == null ? search(board, enableLogs) : sanParser.parseToSan(board, openingMove);
     }
 
@@ -49,43 +47,59 @@ public class ChessBot {
 
         KillerMoves killerMoves = new KillerMoves();
         Move bestMove = null;
+        int bestScore = Integer.MIN_VALUE;
 
         long searchStartTime = System.currentTimeMillis();
 
-        for(int depth = 1; true;) {
-            int bestScore = -INFINITY;
+        for(int depth = 1; ; depth++) {
+            //System.out.println(depth);
+            int aspirationWindow = VAL_WINDOW;
 
-            for(Move move : moveOrderer.getOrderedMoves(board, bestMove, killerMoves, null)) {
-                board.doMove(move);
-                double halfPlyDepth = depth * 2 - 2;
-                int score = -negamax(halfPlyDepth, alpha, beta, 0, board, killerMoves);
-                board.undoMove();
+            boolean aspirationWindowAdjusted = false;
+            int failCount = 0;
 
-                if(score > bestScore) {
-                    bestMove = move;
-                    bestScore = score;
-                }
-
-                if(System.currentTimeMillis() - searchStartTime >= TIME_TO_THINK) {
-                    String parsedMove = sanParser.parseToSan(board, bestMove);
-
-                    if(enableLogs) {
-                        log.info("Busca terminada após profundidade de {}", depth);
-                        log.info("Melhor movimento encontrado {}", parsedMove);
-                    }
-
-                    return parsedMove;
-                }
-
-                if(score <= alpha || score >= beta) {
+            while(!aspirationWindowAdjusted) {
+                if(failCount > 1) {
                     alpha = -INFINITY;
                     beta = INFINITY;
+                }
+
+                for(Move move : moveOrderer.getOrderedMoves(board, bestMove, killerMoves, null)) {
+                    board.doMove(move);
+                    double halfPlyDepth = depth * 2 - 2;
+                    int score = -negamax(halfPlyDepth, alpha, beta, 0, board, killerMoves);
+                    board.undoMove();
+
+                    if(score > bestScore) {
+//                        System.out.println("Move: " + move);
+//                        System.out.println("Score: " + score);
+                        bestMove = move;
+                        bestScore = score;
+                    }
+
+                    if(System.currentTimeMillis() - searchStartTime >= TIME_TO_THINK) {
+                        String parsedMove = sanParser.parseToSan(board, bestMove);
+
+                        if(enableLogs) {
+                            log.info("Busca terminada após profundidade de {}", depth);
+                            log.info("Melhor movimento encontrado {}", parsedMove);
+                        }
+
+                        return parsedMove;
+                    }
+                }
+
+                if(bestScore <= alpha || bestScore >= beta) {
+                    alpha = bestScore - aspirationWindow;
+                    beta = bestScore + aspirationWindow;
+                    aspirationWindow += aspirationWindow / 2;
+                    failCount++;
                     continue;
                 }
 
                 alpha = bestScore - VAL_WINDOW;
                 beta = bestScore + VAL_WINDOW;
-                depth++;
+                aspirationWindowAdjusted = true;
             }
         }
     }
@@ -103,14 +117,6 @@ public class ChessBot {
         }
 
         int fullPlyDepth = (int) (halfPlyDepth / 2);
-
-        if(board.isMated()) {
-            //System.out.println("Estou chegando no mate " + fullPlyDepth);
-            return (int) -(MATE_SCORE - halfPlyDepth);
-        }
-
-        //System.out.println(fullPlyDepth);
-
         long hashKey = zorbristHasher.generateHash(board);
 
         TranspositionEntry entry = tTable.retrieveEntry(hashKey, fullPlyDepth);
@@ -119,6 +125,11 @@ public class ChessBot {
             if(entry.flag() == Flag.EXACT) return entry.score();
             if(entry.flag() == Flag.UPPERBOUND && entry.score() <= alpha) return alpha;
             if(entry.flag() == Flag.UPPERBOUND && entry.score() >= beta) return beta;
+        }
+
+        if(board.isMated()) {
+            //System.out.println("Estou chegando no mate " + fullPlyDepth);
+            return (int) -(MATE_SCORE - halfPlyDepth);
         }
 
         Move tableBestMove = entry != null ? entry.move() : null;
@@ -182,15 +193,14 @@ public class ChessBot {
         double extension = 0;
 
         if(totalExtensions < MAX_NUMBER_EXTENSION) {
-            if(board.isKingAttacked()) {
-                extension = 1;
-            }
-
             // TODO: Fazer essas extenções de um jeito mais inteligente
+//            if(board.isKingAttacked()) {
+//                extension = 1;
+//            }
 
-            if(pvNode) {
-                extension = Math.max(extension, .5);
-            }
+//            if(pvNode) {
+//                extension = Math.max(extension, .5);
+//            }
 //
 //            if(capturedPiece != Piece.NONE && canRecapture) {
 //                extension = 1;

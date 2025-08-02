@@ -15,7 +15,7 @@ import org.springframework.stereotype.Service;
 @Service
 @RequiredArgsConstructor
 public class MoveOrderer {
-    private static final int MATE_SCORE = 100_000_000;
+    private static final int MATE_SCORE = 490_000;
     private static final int KILLER_MOVE_SCORE = 10_000;
     private final BoardEvaluator boardEvaluator;
 
@@ -36,14 +36,7 @@ public class MoveOrderer {
             }
 
             if(BoardUtils.isMateMove(board, move)) {
-                if(
-                    move.getTo() == Square.D1
-                    && move.getFrom() == Square.D6
-                    && board.getPiece(move.getFrom()) == Piece.BLACK_QUEEN
-                ) {
-                    printar = true;
-                    //System.out.println("não fui esquecido haha " + board.getSideToMove());
-                }
+                //printar = move.getTo() == Square.D1 && Square.D8 == move.getFrom();
 
                 scoredMoves.add(new ScoredMove(move, MATE_SCORE));
                 continue;
@@ -58,9 +51,9 @@ public class MoveOrderer {
 
         List<Move> orderedMoves = quickSort(scoredMoves).stream().map(ScoredMove::move).toList();
 
-        if(printar) {
-            //System.out.println(orderedMoves);
-        }
+//        if(printar) {
+//            System.out.println(orderedMoves);
+//        }
 
         return orderedMoves;
     }
